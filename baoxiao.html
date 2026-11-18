@@ -18,6 +18,7 @@
 //# sourceMappingURL=firebase-database-compat.js.map
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1c2430;--mute:#667085;--line:#e3e6eb;--navy:#16324f;--ok:#1a7f4b;--okbg:#e7f5ec;--warn:#9a5b00;--warnbg:#fff3dc;--bad:#b3261e;--badbg:#fdecea}
 *{box-sizing:border-box}
@@ -58,6 +59,11 @@ tr.sum td{font-weight:600;background:#fafbfc}
 ul.iss{margin:0;padding-left:18px}
 ul.iss li{margin:3px 0}
 .ro .edit{display:none!important}
+.ovl{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dlg{background:#fff;border-radius:12px;padding:18px 20px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.dlg h3{margin:0 0 8px;font-size:16px}
+.dlg p{margin:0 0 16px;font-size:14px;color:#344054;line-height:1.6}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
 #gate{max-width:460px;margin:60px auto;padding:0 16px}
 #gate input{margin:8px 0}
 textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:6px;padding:8px}
@@ -81,6 +87,7 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
       <button class="btn edit" id="save">导出备份</button>
       <button class="btn edit" id="imp">导入数据</button><input type="file" id="imp-file" accept=".json" hidden>
       <span class="note" id="sync"></span>
+      <span class="note" id="use"></span>
       <span style="flex:1"></span>
       <button class="btn pri" id="x-travel">导出 出差报销表</button>
       <button class="btn pri" id="x-daily">导出 日常报销表</button>
@@ -141,6 +148,22 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
     <div class="wrap"><table><thead><tr><th>序号</th><th>日期</th><th>类别</th><th>发票号</th><th class="r">票面</th><th class="r">报销（€）</th><th>税率</th><th>说明</th><th>发票</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
   </div>
 
+  <div class="card">
+    <h2>查询与导出</h2>
+    <div class="grid">
+      <label class="w2">跨月搜索（发票号、内容、申请事由、日期或金额）<input id="q-text" type="search" placeholder="例：Europcar、396、20261008"></label>
+    </div>
+    <div id="q-res" style="margin-top:8px"></div>
+    <div class="grid" style="margin-top:14px">
+      <label>从<input type="month" id="q-from"></label>
+      <label>到<input type="month" id="q-to"></label>
+      <div class="bar w2"><button class="btn sm" id="q-mon">本月</button><button class="btn sm" id="q-yr">全年</button><button class="btn sm" id="q-allt">全部</button></div>
+    </div>
+    <div class="bar" style="margin-top:10px"><button class="btn pri" id="q-xls">导出报销明细（Excel）</button><button class="btn pri" id="q-zip">导出发票文件（ZIP）</button><span class="note" id="q-state"></span></div>
+    <h2 style="margin-top:16px">汇总（按类别和月份）</h2>
+    <div class="wrap" id="q-year"></div>
+  </div>
+
   <div class="card edit">
     <h2>批量挂发票</h2>
     <p class="note">选中本月的发票文件（可以多选，也可以选整个文件夹）。工具按文件名开头的序号自动匹配到票据，例如 A3_…pdf 对应 A3，04_…pdf 对应第 4 张。放在 Antrag 文件夹里、没有票据序号的文件（审批单、邀请函等）会挂到对应的申请上，这需要用“选择文件夹”。匹配结果先给您看，确认后再上传。</p>
@@ -162,6 +185,11 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
     <div class="wrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>付款日期</th><th>对应报销月份</th><th class="r">金额（€）</th><th>备注</th><th></th></tr></thead><tbody id="p-list"></tbody></table></div>
     <h2 style="margin-top:16px">各月报销与付款</h2>
     <div class="wrap"><table style="min-width:640px"><thead><tr><th>报销月份</th><th class="r">报销金额</th><th class="r">已付款</th><th class="r">未付</th><th>付款日期</th></tr></thead><tbody id="p-sum"></tbody></table></div>
+  </div>
+
+  <div class="card edit" id="trash-card" hidden>
+    <h2>回收站（本月已删除的票据）</h2>
+    <div class="wrap"><table style="min-width:640px"><thead><tr><th>删除时间</th><th>票据日期</th><th>内容</th><th class="r">金额</th><th></th></tr></thead><tbody id="trash"></tbody></table></div>
   </div>
 
   <div class="card edit">
@@ -211,9 +239,12 @@ function num(v){ var s=String(v==null?'':v).trim().replace(/\s/g,''); if(!s) ret
 function r2(x){return Math.round((x+Number.EPSILON)*100)/100;}
 function fmt(x){return r2(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function dde(iso){ var p=iso.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; }
+function ask(title,body,okText){ return new Promise(function(res){ var o=document.createElement('div'); o.className='ovl'; o.innerHTML='<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t"><h3 id="dlg-t">'+esc(title)+'</h3><p>'+esc(body||'').replace(/\n/g,'<br>')+'</p><div class="bar" style="justify-content:flex-end"><button class="btn" data-x="0">取消</button><button class="btn danger" data-x="1">'+esc(okText||'确定')+'</button></div></div>'; document.body.appendChild(o);
+  var prev=document.activeElement, done=function(v){ document.removeEventListener('keydown',key,true); o.remove(); try{ prev&&prev.focus(); }catch(e){} res(v); }, key=function(e){ if(e.key==='Escape'){ e.preventDefault(); done(false); } if(e.key==='Tab'){ var b=o.querySelectorAll('button'); if(e.shiftKey&&document.activeElement===b[0]){ e.preventDefault(); b[1].focus(); } else if(!e.shiftKey&&document.activeElement===b[1]){ e.preventDefault(); b[0].focus(); } } };
+  o.addEventListener('click',function(e){ if(e.target===o) done(false); var x=e.target.getAttribute&&e.target.getAttribute('data-x'); if(x!==null&&x!==undefined) { e.stopPropagation(); done(x==='1'); } }); document.addEventListener('keydown',key,true); o.querySelector('[data-x="0"]').focus(); }); }
 function toast(t){ var e=$('toast'); e.textContent=t; e.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(function(){e.classList.remove('on');},2600); }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function M(){ if(!D.months[cur]) D.months[cur]={ants:[],items:[]}; return D.months[cur]; }
+function M(){ if(!D.months[cur]) D.months[cur]={ants:[],items:[],trash:[]}; return D.months[cur]; }
 function hex(buf){ return Array.prototype.map.call(new Uint8Array(buf),function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
 function deriveSpace(pass){ var enc=new TextEncoder(); return crypto.subtle.importKey('raw',enc.encode(pass.normalize('NFKC')),'PBKDF2',false,['deriveBits']).then(function(key){ return crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc.encode('bx-space/v1|'+CFG.projectId),iterations:300000},key,192); }).then(hex); }
 function normCode(c){ return String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
@@ -221,9 +252,9 @@ function sidOf(code){ return crypto.subtle.digest('SHA-256',new TextEncoder().en
 function newCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', u=new Uint8Array(20), s=''; crypto.getRandomValues(u); for(var i=0;i<20;i++){ s+=A[u[i]%32]; if(i%4===3&&i<19) s+='-'; } return s; }
 function bxRef(p){ return rtdb.ref('spaces/'+SP+'/bx'+(p?'/'+p:'')); }
 function arr(o){ return Object.keys(o||{}).map(function(k){ var x=o[k]; x.id=k; return x; }).sort(function(a,b){ return (a.t||0)-(b.t||0); }); }
-function fromVal(v){ v=v||{}; var o={emp:v.emp||'',stds:arr(v.stds),pays:arr(v.pays),files:arr(v.files),months:{},last:D.last}; Object.keys(v.m||{}).forEach(function(k){ o.months[k]={ants:arr(v.m[k].ants),items:arr(v.m[k].items)}; }); return o; }
+function fromVal(v){ v=v||{}; var o={emp:v.emp||'',stds:arr(v.stds),pays:arr(v.pays),files:arr(v.files),months:{},last:D.last}; Object.keys(v.m||{}).forEach(function(k){ var all=arr(v.m[k].items); o.months[k]={ants:arr(v.m[k].ants),items:all.filter(function(x){return !x.del;}),trash:all.filter(function(x){return x.del;})}; }); return o; }
 function flat(){ var f={}, t=Date.now(), n=0; f.emp=D.emp||null; D.stds.forEach(function(s){ if(!s.t) s.t=t+(n++); f['stds/'+s.id]=s; }); (D.pays||[]).forEach(function(s){ if(!s.t) s.t=t+(n++); f['pays/'+s.id]=s; }); (D.files||[]).forEach(function(s){ f['files/'+s.id]=s; });
-  Object.keys(D.months).forEach(function(k){ var m=D.months[k]; m.ants.forEach(function(a){ if(!a.t) a.t=t+(n++); f['m/'+k+'/ants/'+a.id]=a; }); m.items.forEach(function(x){ if(!x.t) x.t=t+(n++); f['m/'+k+'/items/'+x.id]=x; }); }); return f; }
+  Object.keys(D.months).forEach(function(k){ var m=D.months[k]; m.ants.forEach(function(a){ if(!a.t) a.t=t+(n++); f['m/'+k+'/ants/'+a.id]=a; }); m.items.concat(m.trash||[]).forEach(function(x){ if(!x.t) x.t=t+(n++); f['m/'+k+'/items/'+x.id]=x; }); }); return f; }
 function clean(o){ return JSON.parse(JSON.stringify(o)); }
 /* 把内存里的改动同步到数据库：只写有变化的条目 */
 function store(){ try{ localStorage.setItem('bx_last',cur); }catch(e){} if(RO||!ready) return;
@@ -255,7 +286,7 @@ function issues(){
   N.forEach(function(r){ var x=r.it;
     if(!x.no){ if(!x.hist) L.push(['warn',r.no+' 没有发票号']); }
     else { var k=x.no.replace(/\s/g,'').toLowerCase(); if(seen[k]) L.push(['bad',r.no+' 和 '+seen[k]+' 的发票号相同（'+x.no+'），可能重复报销']); else seen[k]=r.no; }
-    if(x.date.slice(0,7)>cur) L.push(['bad',r.no+' 的票据日期晚于本月']);
+    if(x.date.slice(0,7)>cur) L.push([x.hist?'info':'bad',r.no+' 的票据日期晚于本月'+(x.hist?'（历史数据，原报销表如此）':'')]);
     else if(x.date.slice(0,7)<cur&&!x.hist) L.push(['info',r.no+' 是以前月份的票据（'+dde(x.date)+'），属于补报']);
     if(x.cat==='meal'&&!(x.note||'').trim()&&!r.ant&&!x.hist) L.push(['warn',r.no+' 是招待费，但没有写招待对象，也没有挂在申请下']);
     if(x.amt>origEur(x)+0.005) L.push(['bad',r.no+' 的报销金额大于票面金额']);
@@ -263,6 +294,8 @@ function issues(){
     else if(x.amt<origEur(x)-0.005) L.push(['info',r.no+' 只报销了票面的一部分（票面 '+fmt(origEur(x))+'，报销 '+fmt(x.amt)+'）']);
     if(!x.std&&!x.hist&&D.stds.some(function(s){return s.cat===x.cat;})) L.push(['warn',r.no+' 所属类别设有报销标准，但这张票没有选用标准']);
   });
+  var other={}; Object.keys(D.months).forEach(function(k){ if(k===cur) return; D.months[k].items.forEach(function(x){ if(x.no){ var q=x.no.replace(/\s/g,'').toLowerCase(); if(q.length>=5) other[q]=k; } }); });
+  N.forEach(function(r){ var x=r.it; if(!x.no) return; var q=x.no.replace(/\s/g,'').toLowerCase(); if(other[q]) L.push(['bad',r.no+' 的发票号 '+x.no+' 在 '+other[q]+' 已经报销过，可能跨月重复']); });
   var nf=N.filter(function(r){ return !filesOf(r.it.id).length; }).length; if(nf) L.push(['info','本月有 '+nf+' 张票据还没有挂发票文件']);
   var dup={}; N.forEach(function(r){ var x=r.it,k=x.date+'|'+x.cat+'|'+x.amt; if(dup[k]&&(!x.no||!dup[k].it.no)) L.push(['warn',r.no+' 和 '+dup[k].no+' 的日期、类别、金额完全相同，请确认不是同一张票']); else if(!dup[k]) dup[k]=r; });
   m.ants.forEach(function(a,i){ var s=sumAnt(a.id); if(a.bud>0&&s>a.bud+0.005) L.push(['bad','申请 '+letter(i)+'（'+a.title+'）超预算 '+fmt(s-a.bud)+' 欧元']); if(!m.items.some(function(x){return x.ant===a.id;})) L.push(['info','申请 '+letter(i)+' 下面还没有票据']); });
@@ -272,7 +305,9 @@ function sumAnt(id){ return r2(M().items.filter(function(x){return x.ant===id;})
 function render(){
   var m=M(), N=numbered();
   if(document.activeElement!==$('emp')) $('emp').value=D.emp||'';
-  renderPay();
+  renderPay(); renderYear(); if($('q-text').value.trim().length>=2) doSearch();
+  var TR=(m.trash||[]); $('trash-card').hidden=!TR.length||RO; $('trash').innerHTML=TR.map(function(x){ var d=new Date(x.del); return '<tr><td>'+('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'. '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+'</td><td>'+dde(x.date)+'</td><td>'+esc(desc(x).cn)+(filesOf(x.id).length?' <span class="chip">含 '+filesOf(x.id).length+' 个文件</span>':'')+'</td><td class="r">'+fmt(x.amt)+'</td><td style="white-space:nowrap"><button class="btn sm" data-undo="'+x.id+'">恢复</button> <button class="btn sm del" data-purge="'+x.id+'">彻底删除</button></td></tr>'; }).join('');
+  var fb=(D.files||[]).reduce(function(s,f){return s+f.size;},0)*1.34/1e6; $('use').textContent=(D.files||[]).length?'发票文件 '+(D.files||[]).length+' 个，占用约 '+Math.round(fb)+' MB（免费额度 1000 MB）':'';
   $('v-state').textContent=Object.keys(VIEWER).length?'当前有一个有效的查看链接。':'还没有生成过。';
   $('std-n').textContent=D.stds.length?'（已设 '+D.stds.length+' 条）':'（还没有设置）';
   $('s-list').innerHTML=D.stds.length?D.stds.map(function(s){ return '<tr><td>'+(CAT[s.cat]||CAT.other).cn+'</td><td>'+esc(s.name)+'</td><td class="r">'+fmt(s.amt)+'</td><td>'+s.unit+'</td><td><button class="btn sm del" data-sdel="'+s.id+'" aria-label="删除标准 '+esc(s.name)+'">删除</button></td></tr>'; }).join(''):'<tr><td colspan="5" class="note">还没有标准。</td></tr>';
@@ -324,9 +359,62 @@ function matchFiles(list){ var N=numbered(); return list.map(function(file){ var
 function renderBulk(){ var o=$('b-out'); if(!bulk.length){ o.innerHTML=''; return; } var ok=bulk.filter(function(b){return b.hit;});
   o.innerHTML='<div class="wrap" style="margin-top:10px;max-height:320px;overflow:auto"><table style="min-width:640px"><thead><tr><th>文件</th><th>匹配到</th></tr></thead><tbody>'+bulk.map(function(b){ return '<tr><td>'+esc(b.file.name)+'</td><td>'+(b.hit?(b.hit.doc?'<span class="chip ok">申请 '+b.hit.no+'</span> 审批件或附件 · '+esc(b.hit.ant.title.slice(0,30)):'<span class="chip ok">'+b.hit.no+'</span> '+esc(desc(b.hit.it).cn)+' '+fmt(b.hit.it.amt)):'<span class="chip warn">未匹配</span> '+esc(b.why))+'</td></tr>'; }).join('')+'</tbody></table></div><div class="bar" style="margin-top:8px"><button class="btn pri" id="b-go">上传已匹配的 '+ok.length+' 个文件</button><button class="btn" id="b-clear">清空</button><span class="note">未匹配 '+(bulk.length-ok.length)+' 个，可以在票据列表里点“＋”手工挂。</span></div>'; }
 function runBulk(){ if(busyUp) return; var q=bulk.filter(function(b){return b.hit;}), n=q.length, done=0, fail=[]; if(!n) return; busyUp=true;
-  var next=function(){ if(!q.length){ busyUp=false; bulk=bulk.filter(function(b){return !b.hit;}); renderBulk(); $('b-state').textContent='上传完成：成功 '+done+' 个'+(fail.length?'，失败 '+fail.length+' 个（'+fail.join('、')+'）':''); return; } var b=q.shift(); $('b-state').textContent='正在上传 '+(done+fail.length+1)+' / '+n+'：'+b.file.name;
-    upload(b.file,b.hit.doc?b.hit.ant.id:b.hit.it.id).then(function(){ done++; b.hit=null; next(); },function(e){ fail.push(b.file.name); b.why=String(e&&e.message||'上传失败'); b.hit=null; next(); }); }; next(); }
+  var next=function(){ if(!q.length){ busyUp=false; bulk=bulk.filter(function(b){return !b.hit&&!b.done;}); renderBulk(); $('b-state').textContent='上传完成：成功 '+done+' 个'+(fail.length?'，失败 '+fail.length+' 个（'+fail.join('、')+'）':''); return; } var b=q.shift(); $('b-state').textContent='正在上传 '+(done+fail.length+1)+' / '+n+'：'+b.file.name;
+    upload(b.file,b.hit.doc?b.hit.ant.id:b.hit.it.id).then(function(){ done++; b.hit=null; b.done=true; next(); },function(e){ fail.push(b.file.name); b.why=String(e&&e.message||'上传失败'); b.hit=null; next(); }); }; next(); }
 function ruleCheck(){ if(RO) return; rtdb.ref('bxfile/'+'0'.repeat(40)).once('value').then(function(){ $('r-warn').innerHTML=''; },function(){ $('r-warn').innerHTML='<div style="background:var(--warnbg);color:var(--warn);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px"><b>挂发票前需要更新一次数据库规则。</b><br>把 Firebase 规则页里现有的内容整段复制到第一个框，再把第二个框里的内容整段贴回 Firebase 并发布，然后刷新本页。<label class="note" style="display:block;margin-top:6px">现有规则<textarea id="r-old2"></textarea></label><label class="note" style="display:block">合并后的规则（复制这一段）<textarea id="r-new2" readonly></textarea></label></div>'; $('r-old2').addEventListener('input',function(){ var r=rulesMerge(SP,this.value); $('r-new2').value=r===null?'现有规则不是合法的 JSON，请重新完整复制。':(this.value.trim()?r:''); }); }); }
+
+function numberedOf(k){ var keep=cur; cur=k; var r=numbered(); cur=keep; return r; }
+function monthsIn(a,b){ return Object.keys(D.months).filter(function(k){ return (!a||k>=a)&&(!b||k<=b)&&D.months[k].items.length; }).sort(); }
+function rangeOf(){ var a=$('q-from').value, b=$('q-to').value; if(a&&b&&a>b){ var t=a; a=b; b=t; } return [a,b]; }
+function rangeTag(){ var r=rangeOf(); return (r[0]||'开始')+'_至_'+(r[1]||'最新'); }
+function renderYear(){
+  var r=rangeOf(), ks=monthsIn(r[0],r[1]), o=$('q-year'); if(!ks.length){ o.innerHTML='<p class="note">所选时间段内没有票据。</p>'; return; }
+  var cats={}, tot={}, grand=0; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; tot[k]=(tot[k]||0)+x.amt; grand+=x.amt; }); });
+  var names=Object.keys(cats).sort(function(a,b){ var sa=0,sb=0; ks.forEach(function(k){ sa+=cats[a][k]||0; sb+=cats[b][k]||0; }); return sb-sa; });
+  var h='<table><thead><tr><th>类别</th>'+ks.map(function(k){return '<th class="r">'+k.slice(2)+'</th>';}).join('')+'<th class="r">合计</th></tr></thead><tbody>';
+  names.forEach(function(n){ var s=0; h+='<tr><td>'+esc(n)+'</td>'+ks.map(function(k){ var v=cats[n][k]||0; s+=v; return '<td class="r">'+(v?fmt(v):'')+'</td>'; }).join('')+'<td class="r"><b>'+fmt(s)+'</b></td></tr>'; });
+  var P=D.pays||[], paid=0;
+  h+='<tr class="sum"><td>报销合计</td>'+ks.map(function(k){return '<td class="r">'+fmt(tot[k]||0)+'</td>';}).join('')+'<td class="r">'+fmt(grand)+'</td></tr>';
+  h+='<tr><td>已付款</td>'+ks.map(function(k){ var v=P.filter(function(p){return p.mon===k;}).reduce(function(s,p){return s+p.amt;},0); paid+=v; return '<td class="r">'+(v?fmt(v):'')+'</td>'; }).join('')+'<td class="r">'+fmt(paid)+'</td></tr>';
+  h+='<tr class="sum"><td>未付</td>'+ks.map(function(k){ var v=(tot[k]||0)-P.filter(function(p){return p.mon===k;}).reduce(function(s,p){return s+p.amt;},0); return '<td class="r">'+(Math.abs(v)<0.005?'':fmt(v))+'</td>'; }).join('')+'<td class="r">'+fmt(grand-paid)+'</td></tr></tbody></table>';
+  o.innerHTML=h;
+}
+function doSearch(){
+  var q=$('q-text').value.trim().toLowerCase(), o=$('q-res'); if(q.length<2){ o.innerHTML=''; return; }
+  var qn=num(q), hits=[]; Object.keys(D.months).sort().forEach(function(k){ numberedOf(k).forEach(function(r){ var x=r.it, d=desc(x), hay=[x.no,d.cn,d.de,x.note,r.ant?r.ant.title:'',dde(x.date),x.date,(CAT[x.cat]||CAT.other).cn,filesOf(x.id).map(function(f){return f.name;}).join(' ')].join(' ').toLowerCase();
+    if(hay.indexOf(q)>-1||(isFinite(qn)&&(Math.abs(qn-x.amt)<0.005||Math.abs(qn-x.orig)<0.005))) hits.push({k:k,r:r}); }); });
+  if(!hits.length){ o.innerHTML='<p class="note">没有找到。可以搜发票号、内容、申请事由、日期或金额。</p>'; return; }
+  o.innerHTML='<p class="note">找到 '+hits.length+' 张'+(hits.length>200?'，只显示前 200 张':'')+'。</p><div class="wrap" style="max-height:360px;overflow:auto"><table><thead><tr><th>月份</th><th>序号</th><th>日期</th><th>内容</th><th>发票号</th><th class="r">报销（€）</th><th>发票</th><th></th></tr></thead><tbody>'+hits.slice(0,200).map(function(h){ var x=h.r.it; return '<tr><td>'+h.k+'</td><td>'+h.r.no+'</td><td>'+dde(x.date)+'</td><td>'+esc(desc(x).cn)+(h.r.ant?'<br><span class="note">'+esc(h.r.ant.title.slice(0,40))+'</span>':'')+'</td><td>'+esc(x.no||'')+'</td><td class="r">'+fmt(x.amt)+'</td><td style="white-space:nowrap">'+filesOf(x.id).map(function(f,i){return '<button class="btn sm" data-fopen="'+f.id+'" aria-label="查看发票 '+esc(f.name)+'">查看</button>';}).join(' ')+'</td><td><button class="btn sm" data-goto="'+h.k+'">转到该月</button></td></tr>'; }).join('')+'</tbody></table></div>';
+}
+function xAll(){
+  if(typeof ExcelJS==='undefined'){ toast('表格组件没有加载成功，请检查网络后刷新'); return; }
+  var r=rangeOf(), ks=monthsIn(r[0],r[1]); if(!ks.length){ toast('所选时间段内没有票据'); return; }
+  var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('报销明细');
+  ws.columns=[{width:9},{width:7},{width:34},{width:11},{width:14},{width:38},{width:34},{width:24},{width:13},{width:13},{width:7},{width:34},{width:40}];
+  styleHead(ws.addRow(['月份','序号','申请','票据日期','类别','德语描述','中文描述','发票号','票面金额(€)','报销金额(€)','税率%','备注','发票文件']));
+  var tot=0; ks.forEach(function(k){ numberedOf(k).forEach(function(q){ var x=q.it,d=desc(x); var row=ws.addRow([k,q.no,q.ant?('Antrag '+(q.idx+1)+' '+q.ant.title):'日常报销',new Date(x.date+'T00:00:00Z'),(CAT[x.cat]||CAT.other).cn,d.de,d.cn,x.no||'',origEur(x),x.amt,x.vat,remark(x),filesOf(x.id).map(function(f){return f.name;}).join('；')]); row.font={name:'Arial',size:10}; row.getCell(4).numFmt='dd.mm.yyyy'; row.getCell(9).numFmt='#,##0.00'; row.getCell(10).numFmt='#,##0.00'; tot+=x.amt; }); });
+  var sr=ws.addRow(['合计',null,null,null,null,null,null,null,null,r2(tot)]); sr.font={name:'Arial',bold:true,size:10}; sr.getCell(10).numFmt='#,##0.00'; ws.views=[{state:'frozen',ySplit:1}]; ws.autoFilter={from:'A1',to:'M1'};
+  var s2=wb.addWorksheet('按类别和月份'); var cats={}; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; }); });
+  s2.columns=[{width:18}].concat(ks.map(function(){return {width:12};})).concat([{width:14}]); styleHead(s2.addRow(['类别'].concat(ks).concat(['合计'])));
+  Object.keys(cats).forEach(function(c){ var s=0, row=s2.addRow([c].concat(ks.map(function(k){ var v=r2(cats[c][k]||0); s+=v; return v||null; })).concat([r2(s)])); row.font={name:'Arial',size:10}; row.eachCell(function(cell,i){ if(i>1) cell.numFmt='#,##0.00'; }); });
+  var tr=s2.addRow(['合计'].concat(ks.map(function(k){ return r2(D.months[k].items.reduce(function(s,x){return s+x.amt;},0)); })).concat([r2(tot)])); tr.font={name:'Arial',bold:true,size:10}; tr.eachCell(function(cell,i){ if(i>1) cell.numFmt='#,##0.00'; });
+  var s3=wb.addWorksheet('银行付款'); s3.columns=[{width:12},{width:14},{width:14},{width:60}]; styleHead(s3.addRow(['付款日期','对应报销月份','金额(€)','备注']));
+  (D.pays||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;}).filter(function(p){ return !p.mon||ks.indexOf(p.mon)>-1; }).forEach(function(p){ var row=s3.addRow([new Date(p.date+'T00:00:00Z'),p.mon||'',p.amt,p.note||'']); row.font={name:'Arial',size:10}; row.getCell(1).numFmt='dd.mm.yyyy'; row.getCell(3).numFmt='#,##0.00'; });
+  dl(wb,'报销明细_'+rangeTag()+'.xlsx');
+}
+function safeName(s){ return String(s).replace(/[\\\/:*?"<>|\u0000-\u001f]/g,'_').replace(/\s+/g,' ').trim().slice(0,80); }
+function xZip(){
+  if(busyUp){ toast('正在处理中，请稍候'); return; } if(typeof JSZip==='undefined'){ toast('压缩组件没有加载成功，请检查网络后刷新'); return; }
+  var r=rangeOf(), ks=monthsIn(r[0],r[1]), jobs=[];
+  ks.forEach(function(k){ var m=D.months[k]; numberedOf(k).forEach(function(q){ filesOf(q.it.id).forEach(function(f){ jobs.push({f:f,path:k+'/'+(q.ant?safeName('Antrag'+(q.idx+1)+'_'+q.ant.title).slice(0,50):'日常')+'/'+safeName(f.name)}); }); });
+    m.ants.forEach(function(a,i){ filesOf(a.id).forEach(function(f){ jobs.push({f:f,path:k+'/'+safeName('Antrag'+(i+1)+'_'+a.title).slice(0,50)+'/审批件_'+safeName(f.name)}); }); }); });
+  if(!jobs.length){ toast('所选时间段内没有挂发票文件'); return; }
+  var mb=jobs.reduce(function(s,j){return s+j.f.size;},0)/1e6; busyUp=true; var zip=new JSZip(), i=0, fail=[], used={}, st=$('q-state');
+  var next=function(){ if(i>=jobs.length){ st.textContent='正在打包 '+jobs.length+' 个文件…'; zip.generateAsync({type:'blob',compression:'STORE'},function(m){ st.textContent='正在打包… '+Math.round(m.percent)+'%'; }).then(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='报销发票_'+rangeTag()+'.zip'; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},2000); busyUp=false; st.textContent='已导出 '+(jobs.length-fail.length)+' 个文件'+(fail.length?'，失败 '+fail.length+' 个：'+fail.join('、'):''); window.__lastZip={n:jobs.length-fail.length,size:blob.size}; },function(){ busyUp=false; st.textContent='打包失败，可能是内存不够，请缩小时间段再试'; }); return; }
+    var j=jobs[i++]; st.textContent='正在下载 '+i+' / '+jobs.length+'（共约 '+Math.round(mb)+' MB）';
+    rtdb.ref('bxfile/'+j.f.id).once('value').then(function(s){ var v=s.val(); if(!v) throw new Error('empty'); var parts=[]; for(var c=0;c<j.f.n;c++) parts.push(v[c]||''); var p=j.path; if(used[p]){ var d=p.lastIndexOf('.'); p=(d>0?p.slice(0,d):p)+'_'+(++used[j.path])+(d>0?p.slice(d):''); } else used[p]=1; zip.file(p,parts.join(''),{base64:true}); }).catch(function(){ fail.push(j.f.name); }).then(next); };
+  next();
+}
 
 function monTotal(k){ var m=D.months[k]; return m?r2(m.items.reduce(function(s,x){return s+x.amt;},0)):0; }
 function renderPay(){
@@ -420,7 +508,7 @@ function start(){
   var now=new Date(), def=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2);
   load(); cur=D.last||def; $('mon').value=cur;
   $('f-cat').innerHTML=CATS.map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join(''); $('s-cat').innerHTML=$('f-cat').innerHTML; $('s-cat').value='hotel';
-  $('f-vat').value=String(CAT[$('f-cat').value].vat); $('f-date').value=cur+'-01'; $('p-mon').value=cur;
+  $('f-vat').value=String(CAT[$('f-cat').value].vat); $('f-date').value=cur+'-01'; $('p-mon').value=cur; $('q-from').value=cur.slice(0,4)+'-01'; $('q-to').value=cur.slice(0,4)+'-12';
   render(); fillStd(); hint();
 }
 function rulesMerge(space,old){ var base={rules:{'.read':false,'.write':false}}; try{ var o=JSON.parse(old); if(o&&o.rules&&typeof o.rules==='object') base=o; }catch(e){ if(String(old||'').trim()) return null; }
@@ -460,20 +548,28 @@ $('f-cancel').addEventListener('click',clearForm);
 $('a-add').addEventListener('click',function(){ var t=$('a-title').value.trim(), b=num($('a-bud').value); if(!t){ toast('请填申请事由'); return; } M().ants.push({id:uid(),title:t,bud:b>0?r2(b):0}); $('a-title').value=''; $('a-bud').value=''; store(); render(); });
 document.addEventListener('click',function(e){ var t=e.target, m=M();
   if(t.dataset.fopen){ openFile(t.dataset.fopen); return; }
+  if(t.dataset.goto){ cur=t.dataset.goto; $('mon').value=cur; D.last=cur; bulk=[]; renderBulk(); clearForm(); render(); window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(t.id==='q-xls'){ xAll(); return; } if(t.id==='q-zip'){ xZip(); return; }
+  if(t.id==='q-mon'){ $('q-from').value=cur; $('q-to').value=cur; renderYear(); return; }
+  if(t.id==='q-yr'){ $('q-from').value=cur.slice(0,4)+'-01'; $('q-to').value=cur.slice(0,4)+'-12'; renderYear(); return; }
+  if(t.id==='q-allt'){ $('q-from').value=''; $('q-to').value=''; renderYear(); return; }
   if(t.dataset.fadd){ oneFor=t.dataset.fadd; $('one-in').click(); return; }
-  if(t.dataset.fdel){ if(t.dataset.sure){ delFile(t.dataset.fdel).then(function(){ toast('已删除发票文件'); },function(){ toast('删除失败'); }); } else { t.dataset.sure='1'; t.textContent='确认删'; } return; }
+  if(t.dataset.fdel){ var ff=(D.files||[]).find(function(f){return f.id===t.dataset.fdel;}); ask('确定删除这个文件吗？','文件：'+(ff?ff.name:'')+'\n删除后无法恢复，需要重新上传。','删除文件').then(function(y){ if(!y) return; delFile(t.dataset.fdel).then(function(){ toast('已删除文件'); },function(){ toast('删除失败'); }); }); return; }
   if(t.id==='b-go'){ runBulk(); return; }
   if(t.id==='b-clear'){ bulk=[]; renderBulk(); $('b-state').textContent=''; return; }
-  if(t.dataset.pdel){ if(t.dataset.sure){ D.pays=D.pays.filter(function(x){return x.id!==t.dataset.pdel;}); store(); render(); } else { t.dataset.sure='1'; t.textContent='确认删除'; } return; }
-  if(t.dataset.sdel){ if(t.dataset.sure){ D.stds=D.stds.filter(function(s){return s.id!==t.dataset.sdel;}); store(); render(); fillStd(); } else { t.dataset.sure='1'; t.textContent='确认删除'; } return; }
-  if(t.dataset.del){ if(t.dataset.sure){ filesOf(t.dataset.del).forEach(function(f){ delFile(f.id); }); m.items=m.items.filter(function(x){return x.id!==t.dataset.del;}); store(); render(); } else { t.dataset.sure='1'; t.textContent='确认删'; } return; }
-  if(t.dataset.adel){ if(filesOf(t.dataset.adel).length){ toast('这个申请下面还挂着审批件，请先删除文件'); return; } if(m.items.some(function(x){return x.ant===t.dataset.adel;})){ toast('这个申请下面还有票据，先把票据删除或改到别的申请'); return; } if(t.dataset.sure){ m.ants=m.ants.filter(function(a){return a.id!==t.dataset.adel;}); store(); render(); } else { t.dataset.sure='1'; t.textContent='确认删除'; } return; }
+  if(t.dataset.pdel){ var pp=D.pays.find(function(x){return x.id===t.dataset.pdel;}); ask('确定删除这笔付款记录吗？',pp?(dde(pp.date)+'　'+fmt(pp.amt)+' 欧元'+(pp.mon?'　对应 '+pp.mon:'')):'','删除付款').then(function(y){ if(!y) return; D.pays=D.pays.filter(function(x){return x.id!==t.dataset.pdel;}); store(); render(); }); return; }
+  if(t.dataset.sdel){ var ss=D.stds.find(function(x){return x.id===t.dataset.sdel;}); ask('确定删除这条报销标准吗？',ss?(ss.name+'　'+fmt(ss.amt)+' '+ss.unit+'\n已经按它计算过的票据不受影响。'):'','删除标准').then(function(y){ if(!y) return; D.stds=D.stds.filter(function(x){return x.id!==t.dataset.sdel;}); store(); render(); fillStd(); }); return; }
+  if(t.dataset.del){ var rr=numbered().find(function(r){return r.it.id===t.dataset.del;}); if(!rr) return; var nf=filesOf(rr.it.id).length; ask('确定删除这张票据吗？',rr.no+'　'+dde(rr.it.date)+'　'+desc(rr.it).cn+'　'+fmt(rr.it.amt)+' 欧元'+(nf?'\n已挂的 '+nf+' 个发票文件会一起进回收站。':'')+'\n删除后可以在页面下方的“回收站”里恢复。','删除票据').then(function(y){ if(!y) return; var x=rr.it; m.items=m.items.filter(function(i){return i.id!==x.id;}); x.del=Date.now(); (m.trash=m.trash||[]).push(x); store(); render(); toast('已移到回收站'); }); return; }
+  if(t.dataset.undo){ var ux=(m.trash||[]).find(function(i){return i.id===t.dataset.undo;}); if(!ux) return; m.trash=m.trash.filter(function(i){return i.id!==ux.id;}); delete ux.del; m.items.push(ux); store(); render(); toast('已恢复'); return; }
+  if(t.dataset.purge){ var px=(m.trash||[]).find(function(i){return i.id===t.dataset.purge;}); if(!px) return; ask('彻底删除这张票据吗？',dde(px.date)+'　'+desc(px).cn+'　'+fmt(px.amt)+' 欧元\n票据和它的发票文件都会永久删除，无法恢复。','彻底删除').then(function(y){ if(!y) return; filesOf(px.id).forEach(function(f){ delFile(f.id); }); m.trash=m.trash.filter(function(i){return i.id!==px.id;}); store(); render(); toast('已彻底删除'); }); return; }
+  if(t.dataset.adel){ if(filesOf(t.dataset.adel).length){ toast('这个申请下面还挂着审批件，请先删除文件'); return; } if(m.items.some(function(x){return x.ant===t.dataset.adel;})){ toast('这个申请下面还有票据，先把票据删除或改到别的申请'); return; } var aa=m.ants.find(function(a){return a.id===t.dataset.adel;}); ask('确定删除这个申请吗？',aa?aa.title:'','删除申请').then(function(y){ if(!y) return; m.ants=m.ants.filter(function(a){return a.id!==t.dataset.adel;}); store(); render(); }); return; }
   if(t.dataset.edit){ var x=m.items.find(function(i){return i.id===t.dataset.edit;}); if(!x) return; edit=x.id; $('f-ant').value=x.ant||''; $('f-date').value=x.date; $('f-cat').value=x.cat; $('f-vat').value=String(x.vat); $('f-orig').value=x.orig; $('f-cur').value=x.cur; $('f-fx').value=x.cur==='EUR'?'':x.fx; $('f-amt').value=x.capped?'':x.amt; fillStd(x.std||''); $('f-qty').value=x.qty||''; $('f-no').value=x.no||''; $('f-note').value=x.note||''; $('f-cancel').hidden=false; $('f-add').textContent='保存修改'; $('f-h').textContent='二、修改票据'; hint(); $('f-h').scrollIntoView({behavior:'smooth'}); return; }
 });
 $('save').addEventListener('click',function(){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({bx:1,data:D},null,1)],{type:'application/json'})); a.download='报销平台备份_'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500); toast('已导出备份'); });
-$('v-new').addEventListener('click',function(){ var b=this; if(Object.keys(VIEWER).length&&!b.dataset.sure){ b.dataset.sure='1'; b.textContent='确认重新生成（旧链接失效）'; return; } delete b.dataset.sure; b.textContent='生成查看链接';
-  var code=newCode(); sidOf(code).then(function(sid){ var old=Object.keys(VIEWER); return Promise.all(old.map(function(o){ return rtdb.ref('bxview/'+o).remove().catch(function(){}); })).then(function(){ var o={}; o[sid]={t:Date.now()}; return bxRef('viewer').set(o); }).then(function(){ var link=location.origin+location.pathname+'#v='+code; $('v-out').innerHTML='<div class="linkbox" id="v-link">'+esc(link)+'</div><div class="bar"><button class="btn sm" id="v-copy">复制链接</button><span class="note">链接只显示这一次，请现在复制并单独发给报销人本人。</span></div>'; }); }).catch(function(){ toast('生成失败，请检查网络和数据库规则'); }); });
+$('v-new').addEventListener('click',function(){ (Object.keys(VIEWER).length?ask('重新生成查看链接吗？','现在发给报销人的旧链接会立即失效，需要把新链接重新发给对方。','重新生成'):Promise.resolve(true)).then(function(y){ if(!y) return;
+  var code=newCode(); sidOf(code).then(function(sid){ var old=Object.keys(VIEWER); return Promise.all(old.map(function(o){ return rtdb.ref('bxview/'+o).remove().catch(function(){}); })).then(function(){ var o={}; o[sid]={t:Date.now()}; return bxRef('viewer').set(o); }).then(function(){ var link=location.origin+location.pathname+'#v='+code; $('v-out').innerHTML='<div class="linkbox" id="v-link">'+esc(link)+'</div><div class="bar"><button class="btn sm" id="v-copy">复制链接</button><span class="note">链接只显示这一次，请现在复制并单独发给报销人本人。</span></div>'; }); }).catch(function(){ toast('生成失败，请检查网络和数据库规则'); }); }); });
 document.addEventListener('click',function(e){ if(e.target.id==='v-copy'){ var t=$('v-link').textContent; (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){ toast('已复制'); },function(){ toast('请手动选中链接复制'); }); } });
+var qT=null; $('q-text').addEventListener('input',function(){ clearTimeout(qT); qT=setTimeout(doSearch,250); }); ['q-from','q-to'].forEach(function(i){ $(i).addEventListener('change',renderYear); });
 $('b-files').addEventListener('click',function(){ $('b-in').click(); }); $('b-dir').addEventListener('click',function(){ $('b-in2').click(); });
 ['b-in','b-in2'].forEach(function(i){ $(i).addEventListener('change',function(){ var L=Array.prototype.slice.call(this.files); this.value=''; if(!L.length) return; bulk=matchFiles(L); $('b-state').textContent='共 '+L.length+' 个文件，月份 '+cur; renderBulk(); }); });
 $('one-in').addEventListener('change',function(){ var L=Array.prototype.slice.call(this.files), id=oneFor; this.value=''; if(!L.length||!id) return; var p=Promise.resolve(), ok=0; L.forEach(function(f){ p=p.then(function(){ toast('正在上传 '+f.name); return upload(f,id).then(function(){ ok++; }); }); }); p.then(function(){ toast('已挂上 '+ok+' 个文件'); },function(e){ toast(String(e&&e.message||'上传失败，请检查数据库规则')); }); });
