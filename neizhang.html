@@ -84,6 +84,7 @@ tr.sec td{background:#eef3f8;font-weight:600}
     <button data-tab="je" class="on">记账</button>
     <button data-tab="pa">往来</button>
     <button data-tab="rep">四表</button>
+    <button data-tab="bud">预算</button>
     <button data-tab="inv">库存</button>
     <button data-tab="tb">科目余额</button>
     <button data-tab="set">期初与科目</button>
@@ -147,8 +148,8 @@ tr.sec td{background:#eef3f8;font-weight:600}
       <datalist id="acc-list"></datalist>
     </div>
     <div class="card">
-      <div class="bar"><h2 style="margin:0;flex:1">本月分录</h2><span class="note" id="rv-info"></span><select id="je-filter" style="width:auto" aria-label="筛选"><option value="">全部</option><option value="todo">未复核</option><option value="done">已复核</option></select><button class="btn" id="rv-all">显示的全部标为已复核</button><button class="btn" id="dv-imp">导入 DATEV 开票清单</button><input type="file" id="dv-file" accept=".xlsx,.xls,.csv,.txt" hidden><button class="btn" id="imp">从 Excel 导入分录</button><input type="file" id="imp-file" accept=".xlsx" hidden><button class="btn" id="x-je">导出本月分录</button><button class="btn pri" id="x-pack">导出给事务所的资料包</button></div>
-      <p class="note">导入支持“内部记账表”的“记账”页，以及报销平台导出的“记账行”。重复导入同一文件不会产生重复分录。销售发票从 DATEV 导出开票清单（Excel 或 CSV）后用“导入 DATEV 开票清单”一次导入。免税销售（出口、欧盟、三角贸易）的发票旁有“证明”按钮：出口证明或客户税号查询记录拿到并挂上后，点一下标为已齐。</p>
+      <div class="bar"><h2 style="margin:0;flex:1">本月分录</h2><span class="note" id="rv-info"></span><select id="je-filter" style="width:auto" aria-label="筛选"><option value="">全部</option><option value="todo">未复核</option><option value="done">已复核</option></select><button class="btn" id="rv-all">显示的全部标为已复核</button><button class="btn" id="dv-imp">导入开票登记表</button><button class="btn" id="dv-tpl">下载登记表模板</button><input type="file" id="dv-file" accept=".xlsx,.xls,.csv,.txt" hidden><button class="btn" id="imp">从 Excel 导入分录</button><input type="file" id="imp-file" accept=".xlsx" hidden><button class="btn" id="x-je">导出本月分录</button><button class="btn pri" id="x-pack">导出给事务所的资料包</button></div>
+      <p class="note">导入支持“内部记账表”的“记账”页，以及报销平台导出的“记账行”。重复导入同一文件不会产生重复分录。销售发票开出后登记在“开票登记表”里（点“下载登记表模板”拿空表），每周用“导入开票登记表”一次导入，已经导过的自动跳过。免税销售（出口、欧盟、三角贸易）的发票旁有“证明”按钮：出口证明或客户税号查询记录拿到并挂上后，点一下标为已齐。</p>
       <div class="wrap"><table><thead><tr><th>日期</th><th>板块</th><th>摘要</th><th>对方 / 单号</th><th>借方</th><th>贷方</th><th class="r">金额</th><th></th></tr></thead><tbody id="list"></tbody></table></div>
     </div>
     <div class="card" id="miss-card" hidden>
@@ -224,6 +225,22 @@ tr.sec td{background:#eef3f8;font-weight:600}
     </div>
   </div>
 
+  <div id="t-bud" hidden>
+    <input type="file" id="bud-file" accept=".xls,.xlsx" hidden>
+    <div class="card" id="bud-empty"><h2>预算完成情况</h2><p class="note">还没有导入预算。导入集团下发的年度预算表（Excel），系统会读取其中鲁商德国的“整体预算分解-月度”和“费用预算分解”两页。</p><div class="bar" style="margin-top:10px"><button class="btn pri" data-budimp="1">导入预算表</button></div></div>
+    <div id="bud-main" hidden>
+      <div class="card">
+        <div class="bar"><h2 style="margin:0;flex:1">预算完成情况</h2><button class="btn pri" id="bud-x">导出预算完成情况</button><button class="btn" data-budimp="1">重新导入预算表</button></div>
+        <div class="bar" style="margin-top:10px;align-items:center"><span class="note">时间段：从</span><select id="bud-a" style="width:auto" aria-label="起始月份"></select><span class="note">到</span><select id="bud-b" style="width:auto" aria-label="结束月份"></select><button class="btn sm" data-budq="m">本月</button><button class="btn sm" data-budq="ytd">年初累计</button><button class="btn sm" data-budq="q1">一季度</button><button class="btn sm" data-budq="q2">二季度</button><button class="btn sm" data-budq="q3">三季度</button><button class="btn sm" data-budq="q4">四季度</button><button class="btn sm" data-budq="y">全年</button><span style="flex:1"></span><select id="bud-mode" style="width:auto" aria-label="版本"><option value="int">内部暂时版</option><option value="fin">事务所最终版</option></select></div>
+        <p class="note" id="bud-info" style="margin:10px 0"></p>
+        <div class="tiles" id="bud-tiles"></div>
+      </div>
+      <div class="card"><h2>收入、成本、毛利（按业务板块）</h2><div class="wrap"><table style="min-width:860px"><thead><tr><th>业务板块</th><th class="r">实际收入</th><th class="r">收入预算</th><th class="r">收入完成率</th><th class="r">实际成本</th><th class="r">成本预算</th><th class="r">实际毛利</th><th class="r">毛利预算</th><th class="r">毛利完成率</th></tr></thead><tbody id="bud-rev"></tbody></table></div></div>
+      <div class="card"><h2>费用</h2><div class="wrap"><table style="min-width:760px"><thead><tr><th>费用项目</th><th class="r">实际</th><th class="r">同期预算</th><th class="r">使用率</th><th class="r">全年预算</th><th class="r">占全年预算</th><th>对应的事务所科目</th></tr></thead><tbody id="bud-fee"></tbody></table></div></div>
+      <div class="card"><h2>本期说明</h2><p class="note">写给总部看的说明，比如一次性项目。按时间段分别保存，导出时自动带在表下方。</p><textarea id="bud-note" rows="3" style="margin-top:8px" aria-label="本期说明"></textarea></div>
+      <div class="card"><h2>业务板块对应哪条预算</h2><p class="note">系统按名称自动对应，不对的在这里改一次即可。没有预算的板块单独列示，只显示实际数，但计入合计。</p><div class="wrap" style="margin-top:8px"><table style="min-width:420px"><tbody id="bud-map"></tbody></table></div></div>
+    </div>
+  </div>
   <div id="t-inv" hidden>
     <div class="card">
       <div class="bar"><h2 style="margin:0;flex:1">月末库存（按当前月份）</h2><button class="btn pri" id="x-inv">导出存货盘点表</button></div>
@@ -354,12 +371,13 @@ function glRef(p){ return rtdb.ref('spaces/'+SP+'/gl'+(p?'/'+p:'')); }
 /* ---------- 科目归类（SKR03 → 集团报表项目） ---------- */
 function isPL(n){ return (n>=2000&&n<=2999)||(n>=3000&&n<=3969)||(n>=3990&&n<=4999)||(n>=8000&&n<=8999); }
 function isCash(n){ return (n>=1000&&n<=1299)||(n>=1360&&n<=1369); }
+function isSellAcc(n){ return (n>=4100&&n<=4199)||(n>=4360&&n<=4379)||(n>=4500&&n<=4599)||(n>=4600&&n<=4689&&n!==4655)||(n>=4900&&n<=4949); }
 function plKey(n,v){
   if(n>=8000&&n<=8999) return 'rev';
   if(n>=3000&&n<=3999) return 'cogs';
   if(n===4320||(n>=2200&&n<=2289)) return 'tax';
   if((n>=4970&&n<=4979)||(n>=2100&&n<=2169)||(n>=2650&&n<=2669)) return 'fin';
-  if(n>=4600&&n<=4629) return 'sell';
+  if(isSellAcc(n)) return 'sell';
   if(n>=4000&&n<=4999) return 'adm';
   if((n>=2500&&n<=2599)||(n>=2700&&n<=2799)) return 'oinc';
   if(n>=2000&&n<=2499) return 'oexp';
@@ -395,14 +413,14 @@ var LN={rev:'营业收入',cogs:'营业成本',sell:'销售费用',adm:'管理�
  cash:'货币资金',ar:'应收账款',pre:'预付款项',orec:'其他应收款',inv:'存货',ocur:'其他流动资产',lrec:'长期应收款',fa:'固定资产',ap:'应付账款',adv:'预收款项',pay:'应付职工薪酬',taxp:'应交税费',opay:'其他应付款',loan:'长期借款',cap:'实收资本',re:'未分配利润',vat:'其他流动资产 / 应交税费（增值税净额）'};
 function lineOf(n){ if(n>=9000&&n<=9999) return '（期初结转）'; if(isPL(n)&&!(n>=3970&&n<=3989)) return LN[plKey(n,1)]; if(n>=10000&&n<=69999) return '应收账款 / 预收款项'; if(n>=70000) return '应付账款 / 预付款项'; if(n>=1590&&n<=1599) return '其他应收款 / 其他应付款'; var k=bsKey(n,1); return LN[k]||'未归类'; }
 function feeKey(n){
-  if(n>=4100&&n<=4199) return 'a28'; if(n>=4200&&n<=4299) return 'a38'; if(n>=4600&&n<=4629) return 's9';
-  if(n===4630||n===4650||n===4654||n===4655||(n>=4630&&n<=4659)) return 'a31'; if(n>=4660&&n<=4689) return 'a32';
-  if(n>=4800&&n<=4899) return 'a34'; if(n>=4900&&n<=4929) return 'a42'; if(n>=4930&&n<=4949) return 'a33';
+  if(n>=4100&&n<=4199) return 's6'; if(n>=4600&&n<=4629) return 's9'; if(n>=4630&&n<=4659&&n!==4655) return 's10'; if(n>=4660&&n<=4689) return 's11';
+  if(n>=4500&&n<=4599) return 's12'; if(n>=4360&&n<=4379) return 's13'; if(n>=4930&&n<=4949) return 's20'; if(n>=4900&&n<=4929) return 's21';
+  if(n>=4200&&n<=4299) return 'a38'; if(n>=4800&&n<=4899) return 'a34';
   if(n===4950) return 'a50'; if(n===4955||n===4957) return 'a49'; if(n>=4970&&n<=4979) return 'f56';
   if(n===2150||n===2660||(n>=2150&&n<=2169)||(n>=2660&&n<=2669)) return 'f57'; if(n>=2100&&n<=2149) return 'f54'; if(n>=2650&&n<=2659) return 'f55';
   if(n>=4000&&n<=4999&&n!==4320) return 'a48'; return '';
 }
-var FEE={s9:['销售费用 · 广告宣传费',9],a28:['管理费用 · 职工薪酬',28],a31:['管理费用 · 业务招待费',31],a32:['管理费用 · 差旅费',32],a33:['管理费用 · 办公费',33],a34:['管理费用 · 折旧费',34],a38:['管理费用 · 租赁费',38],a42:['管理费用 · 网络通讯费',42],a48:['管理费用 · 其他',48],a49:['管理费用 · 會計費',49],a50:['管理费用 · 專業及律師費用',50],f54:['财务费用 · 利息支出',54],f55:['财务费用 · 利息收入',55],f56:['财务费用 · 手续费',56],f57:['财务费用 · 兌換損益',57]};
+var FEE={s6:['销售费用 · 职工薪酬',6],s9:['销售费用 · 广告宣传费',9],s10:['销售费用 · 业务招待费',10],s11:['销售费用 · 差旅费',11],s12:['销售费用 · 汽车交通费',12],s13:['销售费用 · 保险费',13],s20:['销售费用 · 办公费',20],s21:['销售费用 · 网络通讯费',21],a34:['管理费用 · 折旧费',34],a38:['管理费用 · 租赁费',38],a48:['管理费用 · 其他',48],a49:['管理费用 · 會計費',49],a50:['管理费用 · 專業及律師費用',50],f54:['财务费用 · 利息支出',54],f55:['财务费用 · 利息收入',55],f56:['财务费用 · 手续费',56],f57:['财务费用 · 兌換損益',57]};
 /* 现金流：银行科目对方科目 → 行 */
 function cfRow(c,inflow){
   if(c===2150||c===2660||(c>=2150&&c<=2169)||(c>=2660&&c<=2669)) return 36;
@@ -426,7 +444,7 @@ function flat(){ var f={}; Object.keys(D.acc).forEach(function(n){ f['acc/'+n]=D
 function snapFlat(){ var f=flat(), o={}; Object.keys(f).forEach(function(k){ o[k]=JSON.stringify(f[k]); }); return o; }
 function store(){ if(!ready) return; var f=flat(), u={}, n=0; Object.keys(f).forEach(function(k){ var a=JSON.stringify(f[k]); if(a!==lastFlat[k]){ u[k]=clean(f[k]); n++; } }); Object.keys(lastFlat).forEach(function(k){ if(!(k in f)){ u[k]=null; n++; } });
   if(!n) return; $('sync').textContent='正在保存…'; glRef('').update(u).then(function(){ $('sync').textContent='已保存'; },function(){ $('sync').textContent='保存失败'; toast('保存失败，请检查网络'); }); }
-function onData(v){ v=v||{}; D={acc:v.acc||{},base:v.base||{},cf:v.cf||{},e:v.e||{},seg:v.seg||null,inv:v.inv||{},bk:v.bk||{},bkrule:v.bkrule||{},fx:v.fx||{},files:v.files||{},op:v.op||null,kb:v.kb||{},opmap:v.opmap||{},opcfg:v.opcfg||{},opn:v.opn||{},lock:v.lock||{},vat:v.vat||{},dvrule:v.dvrule||{}}; lastFlat=snapFlat(); ready=true; render(); if(fdl&&document.getElementById('fdlg')&&!document.getElementById('fd-msg').textContent) filesDlg(fdl.key,fdl.title,fdl.mon); }
+function onData(v){ v=v||{}; D={acc:v.acc||{},base:v.base||{},cf:v.cf||{},e:v.e||{},seg:v.seg||null,inv:v.inv||{},bk:v.bk||{},bkrule:v.bkrule||{},fx:v.fx||{},files:v.files||{},op:v.op||null,kb:v.kb||{},opmap:v.opmap||{},opcfg:v.opcfg||{},opn:v.opn||{},lock:v.lock||{},vat:v.vat||{},dvrule:v.dvrule||{},bud:v.bud||null,budc:v.budc||{}}; lastFlat=snapFlat(); ready=true; render(); if(fdl&&document.getElementById('fdlg')&&!document.getElementById('fd-msg').textContent) filesDlg(fdl.key,fdl.title,fdl.mon); }
 function monE(k,withDel){ var o=D.e[k]||{}; return Object.keys(o).map(function(id){ var x=o[id]; x.id=id; return x; }).filter(function(x){ return withDel?true:!x.del; }).sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:(a.t||0)-(b.t||0); }); }
 function accName(n){ var a=D.acc[n]; return a?(a.cn||a.name||''):''; }
 
@@ -466,7 +484,7 @@ function compute(m,fin){
 var ASSET={cash:1,ar:1,pre:1,orec:1,inv:1,ocur:1,lrec:1,fa:1};
 
 /* ---------- 界面 ---------- */
-function showTab(){ ['bank','je','pa','rep','inv','tb','set'].forEach(function(t){ $('t-'+t).hidden=t!==tab; }); Array.prototype.forEach.call(document.querySelectorAll('.tabs button[data-tab]'),function(b){ b.classList.toggle('on',b.dataset.tab===tab); }); }
+function showTab(){ ['bank','je','pa','rep','bud','inv','tb','set'].forEach(function(t){ $('t-'+t).hidden=t!==tab; }); Array.prototype.forEach.call(document.querySelectorAll('.tabs button[data-tab]'),function(b){ b.classList.toggle('on',b.dataset.tab===tab); }); }
 function render(){
   showTab();
   var dl=Object.keys(D.acc).map(Number).sort(function(a,b){return a-b;}).map(function(n){ return '<option value="'+n+'">'+esc(accName(n))+'</option>'; }).join(''); if($('acc-list').dataset.h!==String(dl.length)){ $('acc-list').innerHTML=dl; $('acc-list').dataset.h=String(dl.length); }
@@ -482,6 +500,7 @@ function render(){
   if(tab==='rep') renderRep(compute(cur,repMode==='fin'));
   if(tab==='bank') renderBank();
   if(tab==='pa'){ renderPa(); renderOp(); renderVt(); }
+  if(tab==='bud') renderBud();
   if(tab==='inv') renderInv();
   if(tab==='tb') renderTB(C);
   if(tab==='set') renderSet();
@@ -1008,9 +1027,16 @@ function mcData(m){ var R=[], add=function(l,s,t,tab){ R.push({l:l,s:s,t:t,tab:t
 function renderMc(){ var R=mcData(cur), n={ok:0,warn:0,bad:0,na:0}, CH={ok:['ok','通过'],warn:['warn','留意'],bad:['bad','未完成'],na:['','还不到时候']}; R.forEach(function(r){ n[r.s]++; });
   $('mc-sum').innerHTML=(n.bad?'<span class="chip bad">未完成 '+n.bad+' 项</span> ':'')+(n.warn?'<span class="chip warn">留意 '+n.warn+' 项</span> ':'')+'<span class="chip ok">通过 '+n.ok+' 项</span>'+(n.na?' <span class="note">'+n.na+' 项要等事务所交账</span>':'');
   $('mc-body').innerHTML=R.map(function(r){ return '<tr><td style="white-space:nowrap"><span class="chip '+CH[r.s][0]+'">'+CH[r.s][1]+'</span></td><td>'+esc(r.l)+'</td><td class="note">'+esc(r.t)+'</td><td>'+(r.tab&&r.tab!=='rep'&&r.s!=='ok'&&r.s!=='na'?'<button class="btn sm" data-goto="'+r.tab+'">去处理</button>':'')+'</td></tr>'; }).join(''); }
-/* ---------- DATEV 开票清单导入 ---------- */
+/* ---------- 开票登记表导入 ---------- */
 var DVREV=[['8120','8120 出口到欧盟以外（免税）'],['8130','8130 欧盟三角贸易（免税）'],['8125','8125 欧盟内销售（免税）'],['8338','8338 货物不经过德国（不征税）'],['8400','8400 德国境内销售 19%']], dv=null;
-var DVH=[['nr',/rechnungs?-?\s?(nr|nummer)|belegfeld\s*1|beleg-?\s?(nr|nummer)|invoice\s*(no|number|nr)|发票号/i],['date',/rechnungsdatum|belegdatum|invoice\s*date|^datum$|开票日期|^日期$/i],['acct',/debitor(en)?-?\s?(nr|nummer|konto)|kunden-?\s?(nr|nummer)|^konto$|gesch[aä]ftspartner-?\s?(nr|nummer|konto)/i],['name',/kundenname|^kunde$|debitor(en)?name|empf[aä]nger|^name|^firma|gesch[aä]ftspartner|客户/i],['rev',/gegenkonto|erl[oö]skonto/i],['net',/netto/i],['vat',/^(ust|mwst)(?!.*(id|satz|schl))|umsatzsteuer(?!.*(id|satz))|steuerbetrag|mehrwertsteuer/i],['gross',/brutto|rechnungsbetrag|gesamtbetrag|^betrag|^summe|^umsatz/i],['cur',/w[aä]hrung|^wkz|currency|币种/i],['text',/buchungstext|betreff|bezeichnung|beschreibung|^leistung$|^text|摘要/i]];
+var DVH=[['nr',/rechnungs?-?\s?(nr|nummer)|belegfeld\s*1|beleg-?\s?(nr|nummer)|invoice\s*(no|number|nr)|发票号/i],['date',/rechnungsdatum|belegdatum|invoice\s*date|^datum$|开票日期|发票日期|^日期$/i],['acct',/debitor(en)?-?\s?(nr|nummer|konto)|kunden-?\s?(nr|nummer)|^konto$|gesch[aä]ftspartner-?\s?(nr|nummer|konto)|客户科目/i],['name',/kundenname|^kunde$|debitor(en)?name|empf[aä]nger|^name|^firma|gesch[aä]ftspartner|客户/i],['rev',/gegenkonto|erl[oö]skonto|收入类型|收入科目/i],['seg',/业务板块|^板块$/i],['net',/netto|净额|不含税/i],['vat',/^(ust|mwst)(?!.*(id|satz|schl))|umsatzsteuer(?!.*(id|satz))|steuerbetrag|mehrwertsteuer|税额/i],['gross',/brutto|rechnungsbetrag|gesamtbetrag|^betrag|^summe|^umsatz|含税|总金额|发票金额/i],['cur',/w[aä]hrung|^wkz|currency|币种/i],['text',/buchungstext|betreff|bezeichnung|beschreibung|^leistung$|^text|摘要|品名/i]];
+function dvRev(v){ var s=String(v==null?'':v).trim(), m=/8\d{3}/.exec(s); if(m&&isRevAcc(+m[0])) return m[0]; if(/三角/.test(s)) return '8130'; if(/欧盟/.test(s)) return '8125'; if(/出口/.test(s)) return '8120'; if(/不征税|不经过/.test(s)) return '8338'; if(/境内|19/.test(s)) return '8400'; return ''; }
+function dvTpl(){ if(typeof ExcelJS==='undefined'){ toast('导出组件没有加载成功，请检查网络后刷新'); return; } var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('开票登记表'), H=['发票号','开票日期','客户','收入类型','业务板块','净额','税额','币种','摘要'], W=[20,14,38,34,16,16,12,8,40], RV=DVREV.map(function(d){ return d[1]; });
+  var hs=wb.addWorksheet('选项'); RV.forEach(function(v,i){ hs.getCell(i+1,1).value=v; }); SEGS.forEach(function(v,i){ hs.getCell(i+1,2).value=v; }); ['EUR','USD','CNY'].forEach(function(v,i){ hs.getCell(i+1,3).value=v; }); hs.state='hidden';
+  H.forEach(function(h,i){ var c=ws.getCell(1,i+1); c.value=h; ws.getColumn(i+1).width=W[i]; }); ws.getColumn(2).numFmt='dd.mm.yyyy'; ws.getColumn(6).numFmt='#,##0.00'; ws.getColumn(7).numFmt='#,##0.00';
+  for(var r=2;r<=500;r++){ ws.getCell(r,4).dataValidation={type:'list',allowBlank:true,formulae:['选项!$A$1:$A$'+RV.length]}; ws.getCell(r,5).dataValidation={type:'list',allowBlank:true,formulae:['选项!$B$1:$B$'+SEGS.length]}; ws.getCell(r,8).dataValidation={type:'list',allowBlank:true,formulae:['选项!$C$1:$C$3']}; }
+  var n=wb.addWorksheet('填写说明'); n.getColumn(1).width=110; ['每开出一张销售发票，在“开票登记表”页加一行。作废的发票也登记一行：摘要写“作废”，净额留空，系统不会记账，也不会把它当成缺号。','发票号：和发票上完全一致，系统靠它查重和检查是否连号。','客户：写发票上的客户全称，系统会自动对上已有的客户科目；新客户导入时自动新建。','收入类型和业务板块：从下拉里选。同一个客户以后会自动带出上次的选择。','净额：不含税金额；红字发票（冲减）填负数。税额：只有德国境内 19% 的销售才填。','币种：不填按欧元。美元、人民币发票按当月汇率折算，导入前先在“银行流水”页填好当月汇率。','这张表可以一直往下续写，每周整张导入即可，已经导过的发票会自动跳过。'].forEach(function(s,i){ n.getCell(i+1,1).value=s; n.getCell(i+1,1).alignment={wrapText:true,vertical:'top'}; });
+  tidyWB(wb,{}); ws.views=[{state:'frozen',ySplit:1}]; wb.xlsx.writeBuffer().then(function(b){ dlBlob(new Blob([b]),'鲁商德国_开票登记表.xlsx'); toast('已下载登记表模板'); }); }
 function dvIso(v){ var p2=function(n){ return ('0'+n).slice(-2); }; if(v instanceof Date){ var d=new Date(v.getTime()+12*3600000); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); } if(typeof v==='number'&&v>30000&&v<80000){ var u=new Date(Math.round((v-25569)*86400000)); return u.getUTCFullYear()+'-'+p2(u.getUTCMonth()+1)+'-'+p2(u.getUTCDate()); }
   var s=String(v==null?'':v).trim(), m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return m[1]+'-'+p2(m[2])+'-'+p2(m[3]); m=/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})/.exec(s); if(m) return (m[3].length===2?'20'+m[3]:m[3])+'-'+p2(m[2])+'-'+p2(m[1]); m=/^(\d{1,2})(\d{2})$/.exec(s); if(m&&+m[2]>=1&&+m[2]<=12&&+m[1]>=1&&+m[1]<=31) return cur.slice(0,4)+'-'+m[2]+'-'+p2(m[1]); return ''; }
 function dvNum(v){ if(typeof v==='number') return v; var n=num(String(v==null?'':v).replace(/[^\d.,()\-]/g,'')); return isFinite(n)?n:NaN; }
@@ -1019,12 +1045,12 @@ function dvGaps(items){ var G={}; items.forEach(function(it){ var m=/^(.*?)(\d+)
 function impDatev(file){ if(typeof XLSX==='undefined'){ toast('导入组件没有加载成功，请检查网络后刷新'); return; } if(!me){ toast('请先在右上角选“我是谁”'); return; }
   file.arrayBuffer().then(function(buf){ var wb, isCsv=/\.(csv|txt)$/i.test(file.name); if(isCsv){ var txt; try{ txt=new TextDecoder('utf-8',{fatal:true}).decode(buf); }catch(e){ txt=new TextDecoder('windows-1252').decode(buf); } wb=XLSX.read(txt,{type:'string',raw:true}); } else wb=XLSX.read(buf,{type:'array',cellDates:true});
     var best=null; wb.SheetNames.forEach(function(sn){ var rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}); for(var i=0;i<Math.min(rows.length,20);i++){ var col={}, n=0; (rows[i]||[]).forEach(function(c,j){ var h=String(c||'').trim(); if(!h) return; for(var q=0;q<DVH.length;q++){ var k=DVH[q][0]; if(col[k]===undefined&&DVH[q][1].test(h)){ col[k]=j; n++; break; } } }); if(col.nr!==undefined&&col.date!==undefined&&(col.net!==undefined||col.gross!==undefined)&&(!best||n>best.n)) best={rows:rows,hi:i,col:col,n:n}; } });
-    if(!best){ toast('认不出这份文件的列。需要有发票号、发票日期和金额三列，请把文件发给 Claude 调整'); return; }
-    var c=best.col, items=[], g=function(r,k){ return c[k]===undefined?'':r[c[k]]; };
-    best.rows.slice(best.hi+1).forEach(function(r){ var nr=String(g(r,'nr')||'').trim(), iso=dvIso(g(r,'date')), net=dvNum(g(r,'net')), gross=dvNum(g(r,'gross')), vat=dvNum(g(r,'vat')); if(!isFinite(vat)) vat=0; if(!isFinite(net)) net=isFinite(gross)?r2(gross-vat):NaN; if(!nr||!iso||!isFinite(net)||Math.abs(net)<0.005) return;
-      var name=String(g(r,'name')||'').trim(), ac=String(g(r,'acct')||'').trim(), rv=String(g(r,'rev')||'').trim(), cu=String(g(r,'cur')||'').trim().toUpperCase(); cu=cu==='€'||!cu?'EUR':cu; var cust=(/^\d{5,6}$/.test(ac)&&isCust(+ac)&&D.acc[ac])?ac:(name?paMatch(name,true):''), rule=(D.dvrule||{})[cust]||{};
-      items.push({nr:nr,date:iso,name:name||(cust?accName(cust):''),cust:cust,rev:(/^8\d{3}$/.test(rv)&&isRevAcc(+rv))?rv:(rule.rev||''),seg:rule.seg||'',net:r2(net),vat:r2(vat),cur:cu,text:String(g(r,'text')||'').trim(),dup:dvDup(nr),on:true}); });
-    if(!items.length){ toast('文件里没有读到发票行'); return; } items.forEach(function(it){ if(it.dup) it.on=false; }); dv={items:items,file:file.name,gaps:dvGaps(items)}; dvDlg(); },function(){ toast('读不了这个文件'); }); }
+    if(!best){ toast('认不出这份文件的列。需要有发票号、开票日期和净额三列，建议用“下载登记表模板”里的空表'); return; }
+    var c=best.col, items=[], allNr=[], g=function(r,k){ return c[k]===undefined?'':r[c[k]]; };
+    best.rows.slice(best.hi+1).forEach(function(r){ var nr=String(g(r,'nr')||'').trim(), iso=dvIso(g(r,'date')), net=dvNum(g(r,'net')), gross=dvNum(g(r,'gross')), vat=dvNum(g(r,'vat')); if(!isFinite(vat)) vat=0; if(!isFinite(net)) net=isFinite(gross)?r2(gross-vat):NaN; if(nr) allNr.push({nr:nr}); if(!nr||!iso||!isFinite(net)||Math.abs(net)<0.005) return;
+      var name=String(g(r,'name')||'').trim(), ac=String(g(r,'acct')||'').trim(), rv=dvRev(g(r,'rev')), sg=String(g(r,'seg')||'').trim(), cu=String(g(r,'cur')||'').trim().toUpperCase(); cu=cu==='€'||!cu?'EUR':cu; var cust=(/^\d{5,6}$/.test(ac)&&isCust(+ac)&&D.acc[ac])?ac:(name?paMatch(name,true):''), rule=(D.dvrule||{})[cust]||{};
+      items.push({nr:nr,date:iso,name:name||(cust?accName(cust):''),cust:cust,rev:rv||rule.rev||'',seg:(SEGS.indexOf(sg)>-1?sg:'')||rule.seg||'',net:r2(net),vat:r2(vat),cur:cu,text:String(g(r,'text')||'').trim(),dup:dvDup(nr),on:true}); });
+    if(!items.length){ toast('文件里没有读到发票行'); return; } items.forEach(function(it){ if(it.dup) it.on=false; }); dv={items:items,file:file.name,gaps:dvGaps(allNr)}; dvDlg(); },function(){ toast('读不了这个文件'); }); }
 function dvStat(it){ var k=it.date.slice(0,7); if(it.dup) return ['','已经入过账']; if(locked(k)) return ['bad',k+' 已锁定']; if(it.cur!=='EUR'&&!fxRate(k,it.cur)) return ['bad','缺 '+k+' 的 '+it.cur+' 汇率']; if(!it.rev) return ['warn','请选收入科目']; if(!it.seg) return ['warn','请选业务板块']; if(it.cust&&!(D.acc[it.cust]&&isCust(+it.cust))) return ['bad','客户科目不对']; if(!it.cust) return it.name?['warn','新客户，导入时新建']:['bad','缺客户']; return ['ok','可以导入']; }
 function dvDlg(){ if(!dv) return; var o=document.getElementById('dvdlg'); if(!o){ o=document.createElement('div'); o.id='dvdlg'; o.className='ovl'; document.body.appendChild(o);
     o.addEventListener('change',function(e){ var t=e.target, i=t.dataset.dv, f=t.dataset.f; if(t.id==='dv-allrev'||t.id==='dv-allseg'){ var ff=t.id==='dv-allrev'?'rev':'seg'; if(t.value) dv.items.forEach(function(it){ if(!it.dup) it[ff]=t.value; }); dvDlg(); return; } if(i===undefined) return; var it=dv.items[+i]; if(f==='on') it.on=t.checked; else if(f==='cust'){ it.cust=t.value.trim(); var ru=(D.dvrule||{})[it.cust]; if(ru){ if(!it.rev) it.rev=ru.rev||''; if(!it.seg) it.seg=ru.seg||''; } } else it[f]=t.value; dvDlg(); });
@@ -1032,7 +1058,7 @@ function dvDlg(){ if(!dv) return; var o=document.getElementById('dvdlg'); if(!o)
   var sel=function(list,v,attr){ return '<select '+attr+' style="min-width:110px"><option value="">— 选 —</option>'+list.map(function(d){ var a=typeof d==='string'?[d,d]:d; return '<option value="'+a[0]+'"'+(a[0]===v?' selected':'')+'>'+esc(a[1])+'</option>'; }).join('')+'</select>'; };
   var ok=0, dup=0; var rows=dv.items.map(function(it,i){ var st=dvStat(it); if(it.dup) dup++; if(it.on&&(st[0]==='ok'||st[1]==='新客户，导入时新建')) ok++;
     return '<tr'+(it.dup?' style="opacity:.55"':'')+'><td><input type="checkbox" style="width:auto" data-dv="'+i+'" data-f="on"'+(it.on?' checked':'')+(it.dup?' disabled':'')+' aria-label="导入这张"></td><td style="white-space:nowrap">'+dde(it.date)+'</td><td>'+esc(it.nr)+'</td><td>'+esc(it.name)+'</td><td><input data-dv="'+i+'" data-f="cust" list="acc-list" value="'+esc(it.cust)+'" placeholder="客户科目" style="width:92px" aria-label="客户科目"'+(it.dup?' disabled':'')+'></td><td>'+(it.dup?'':sel(DVREV,it.rev,'data-dv="'+i+'" data-f="rev" aria-label="收入科目"'))+'</td><td>'+(it.dup?'':sel(SEGS,it.seg,'data-dv="'+i+'" data-f="seg" aria-label="业务板块"'))+'</td><td class="r">'+fmt(it.net)+(it.vat?'<br><span class="note">税 '+fmt(it.vat)+'</span>':'')+'</td><td>'+it.cur+'</td><td><span class="chip '+st[0]+'">'+st[1]+'</span></td></tr>'; }).join('');
-  o.innerHTML='<div class="dlg" role="dialog" aria-modal="true" aria-label="导入 DATEV 开票清单" style="max-width:1180px;max-height:92vh;display:flex;flex-direction:column"><h3>导入 DATEV 开票清单</h3><p style="margin-bottom:8px">'+esc(dv.file)+'：读到 '+dv.items.length+' 张发票'+(dup?'，其中 '+dup+' 张已经入过账（自动跳过）':'')+'。每张记一笔“借 客户 / 贷 收入”，金额取净额；带税的另记一笔销项税。</p>'+(dv.gaps.length?'<p style="margin-bottom:8px;color:var(--bad)">发票号不连续，中间缺：'+esc(dv.gaps.slice(0,20).join('、'))+(dv.gaps.length>20?' 等 '+dv.gaps.length+' 个':'')+'。请确认是作废了还是漏导出了。</p>':'<p class="note" style="margin-bottom:8px">发票号连续，没有缺号。</p>')+'<div class="bar" style="margin-bottom:8px"><span class="note">一次全部设为：</span>'+sel(DVREV,'','id="dv-allrev" aria-label="全部收入科目"')+sel(SEGS,'','id="dv-allseg" aria-label="全部业务板块"')+'</div><div class="wrap" style="overflow:auto;flex:1"><table><thead><tr><th></th><th>日期</th><th>发票号</th><th>客户（文件里）</th><th>客户科目</th><th>收入科目</th><th>业务板块</th><th class="r">净额</th><th>币种</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><span class="note" style="flex:1">同一个客户的收入科目和板块会记住，下次自动带出。</span><button class="btn" data-dvx="1">取消</button><button class="btn pri" data-dvgo="1"'+(ok?'':' disabled')+'>导入 '+ok+' 张</button></div></div>'; }
+  o.innerHTML='<div class="dlg" role="dialog" aria-modal="true" aria-label="导入开票登记表" style="max-width:1180px;max-height:92vh;display:flex;flex-direction:column"><h3>导入开票登记表</h3><p style="margin-bottom:8px">'+esc(dv.file)+'：读到 '+dv.items.length+' 张发票'+(dup?'，其中 '+dup+' 张已经入过账（自动跳过）':'')+'。每张记一笔“借 客户 / 贷 收入”，金额取净额；带税的另记一笔销项税。</p>'+(dv.gaps.length?'<p style="margin-bottom:8px;color:var(--bad)">发票号不连续，中间缺：'+esc(dv.gaps.slice(0,20).join('、'))+(dv.gaps.length>20?' 等 '+dv.gaps.length+' 个':'')+'。请确认是作废了还是漏登记了。</p>':'<p class="note" style="margin-bottom:8px">发票号连续，没有缺号。</p>')+'<div class="bar" style="margin-bottom:8px"><span class="note">一次全部设为：</span>'+sel(DVREV,'','id="dv-allrev" aria-label="全部收入科目"')+sel(SEGS,'','id="dv-allseg" aria-label="全部业务板块"')+'</div><div class="wrap" style="overflow:auto;flex:1"><table><thead><tr><th></th><th>日期</th><th>发票号</th><th>客户（文件里）</th><th>客户科目</th><th>收入科目</th><th>业务板块</th><th class="r">净额</th><th>币种</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="bar" style="margin-top:12px;justify-content:flex-end"><span class="note" style="flex:1">同一个客户的收入科目和板块会记住，下次自动带出。</span><button class="btn" data-dvx="1">取消</button><button class="btn pri" data-dvgo="1"'+(ok?'':' disabled')+'>导入 '+ok+' 张</button></div></div>'; }
 function dvBook(){ if(!dv) return; var n=0, nc=0, skip=0, t0=Date.now(); D.dvrule=D.dvrule||{};
   dv.items.forEach(function(it,i){ if(!it.on||it.dup) return; var st=dvStat(it); if(!(st[0]==='ok'||st[1]==='新客户，导入时新建')){ skip++; return; }
     if(!it.cust){ var same=dv.items.filter(function(o){ return o!==it&&o.cust&&o.newc&&nrm(o.name)===nrm(it.name); })[0]; if(same) it.cust=same.cust; else { it.cust=paNext(true); D.acc[it.cust]={name:it.name,cn:it.name}; nc++; } it.newc=true; }
@@ -1042,6 +1068,65 @@ function dvBook(){ if(!dv) return; var n=0, nc=0, skip=0, t0=Date.now(); D.dvrul
     if(Math.abs(it.vat)>=0.005){ if(!D.acc['1776']) D.acc['1776']={name:'Umsatzsteuer 19 %',cn:'销项税 19%'}; var ve=r2(Math.abs(it.vat)/rate), v=Object.assign({},base,{text:'销项税 '+it.nr,dr:neg?1776:+it.cust,cr:neg?+it.cust:1776,amt:ve,t:t0+i*2+1}); if(it.cur!=='EUR') v.fx={c:it.cur,a:Math.abs(it.vat),r:rate}; M[uid()+'b'+i]=v; }
     D.dvrule[it.cust]={rev:it.rev,seg:it.seg}; n++; });
   var o=document.getElementById('dvdlg'); if(o) o.remove(); dv=null; store(); render(); toast('已导入 '+n+' 张销售发票'+(nc?'，新建客户 '+nc+' 个':'')+(skip?'，有 '+skip+' 张没有选全，未导入':'')+'。请到“记账”页挂发票 PDF'); }
+/* ---------- 预算完成情况 ---------- */
+var bp=null, bmode='int';
+var BUDMAP=[['汽车',['红旗','广汽','奔驰','历史收入冲回']],['水杯',['水杯']],['椰糠',['椰糠']],['基质土',['泥炭']],['泥炭',['泥炭']],['奶粉',['奶粉']],['OTC',['OTC']],['瓷器',['瓷器']],['透明质酸',['透明质酸']]];
+var BUDFEE=[['销售费用','职工薪酬',function(n){ return n>=4100&&n<=4199; }],['销售费用','广告宣传费',function(n){ return n>=4600&&n<=4629; }],['销售费用','业务招待费',function(n){ return n>=4630&&n<=4659&&n!==4655; }],['销售费用','差旅费',function(n){ return n>=4660&&n<=4689; }],['销售费用','汽车交通费',function(n){ return n>=4500&&n<=4599; }],['销售费用','办公费',function(n){ return n>=4930&&n<=4949; }],['销售费用','网络通讯费',function(n){ return n>=4900&&n<=4929; }],['销售费用','保险费',function(n){ return n>=4360&&n<=4379; }],
+  ['管理费用','折旧摊销',function(n){ return n>=4800&&n<=4899; }],['管理费用','中介机构费',function(n){ return n>=4950&&n<=4959; }],['管理费用','租赁费',function(n){ return n>=4200&&n<=4299; }],
+  ['财务费用','利息支出',function(n){ return n>=2100&&n<=2149; }],['财务费用','利息收入',function(n){ return n>=2650&&n<=2659; }],['财务费用','手续费支出',function(n){ return n>=4970&&n<=4979; }],['财务费用','汇兑损益',function(n){ return (n>=2150&&n<=2169)||(n>=2660&&n<=2669); }]];
+var BUDCAT=['销售费用','管理费用','财务费用'];
+function budFeeOf(n){ for(var i=0;i<BUDFEE.length;i++) if(BUDFEE[i][2](n)) return [BUDFEE[i][0],BUDFEE[i][1]]; var k=plKey(n,1); return k==='fin'?['财务费用','其他']:k==='sell'?['销售费用','其他']:k==='adm'?['管理费用','其他']:null; }
+function budEnc(s){ return encodeURIComponent(s).replace(/\./g,'%2E'); }
+function budLines(){ var L=(D.bud&&D.bud.lines)||{}; return Object.keys(L).map(function(id){ var l=L[id]; return {id:id,n:l.n,i:l.i||0,r:l.r||[],g:l.g||[]}; }).sort(function(a,b){ return a.i-b.i; }); }
+function budLineOf(seg,lines){ var m=(D.budc&&D.budc.map)||{}, k=budEnc(seg); if(m[k]!==undefined) return m[k]==='-'?'':m[k]; var hit=''; BUDMAP.forEach(function(b){ if(hit) return; if(!b[1].some(function(p){ return seg.indexOf(p)===0; })) return; var l=lines.filter(function(x){ return x.n.indexOf(b[0])>-1; })[0]; if(l) hit=l.id; }); return hit; }
+function monAcc(k,fin){ var o={}, B=D.base[k], es=monE(k); if(B&&(fin||!es.length)){ Object.keys(B.acc).forEach(function(n){ var v=(B.acc[n].d||0)-(B.acc[n].c||0); if(v) o[n]=v; }); } else es.forEach(function(x){ o[x.dr]=(o[x.dr]||0)+x.amt; o[x.cr]=(o[x.cr]||0)-x.amt; }); return o; }
+function budRun(a,b,fin){ var B=D.bud, y=B.y, rate=B.rate||8, ia=+a-1, ib=+b-1, ma=y+'-'+a, mb=y+'-'+b, lines=budLines(), sum=function(arr){ var t=0; for(var i=ia;i<=ib;i++) t+=+(arr[i]||0); return t/rate; }, yr=function(arr){ var t=0; for(var i=0;i<12;i++) t+=+(arr[i]||0); return t/rate; };
+  var S=segLines(mb), seg={}; S.lines.forEach(function(l){ if(l.m<ma||l.m>mb) return; var t=seg[l.s]||(seg[l.s]={r:0,c:0}); if(l.k==='收入') t.r+=l.amt; else t.c+=l.amt; });
+  var rows=lines.map(function(l){ return {id:l.id,n:l.n,segs:[],r:0,c:0,br:sum(l.r),bg:sum(l.g),yr:yr(l.r),yg:yr(l.g)}; }), unb=[], tot={r:0,c:0,br:0,bg:0,yr:0,yg:0};
+  S.segs.forEach(function(s){ var t=seg[s]; if(!t||(Math.abs(t.r)<0.005&&Math.abs(t.c)<0.005)) return; var id=budLineOf(s,lines), row=rows.filter(function(x){ return x.id===id; })[0]; if(row){ row.segs.push({s:s,r:t.r,c:t.c}); row.r+=t.r; row.c+=t.c; } else unb.push({s:s,r:t.r,c:t.c}); tot.r+=t.r; tot.c+=t.c; });
+  rows.forEach(function(x){ tot.br+=x.br; tot.bg+=x.bg; tot.yr+=x.yr; tot.yg+=x.yg; });
+  var acc={}, k=ma; while(k<=mb){ var o=monAcc(k,fin); Object.keys(o).forEach(function(n){ acc[n]=(acc[n]||0)+o[n]; }); k=nextMon(k); }
+  var F={}, FB=(B.fee)||{}, n12=(ib-ia+1)/12, ledR=0, ledC=0, tax=0, oth=0; BUDCAT.forEach(function(c){ F[c]={c:c,items:{},act:0,bud:0,yb:0}; });
+  Object.keys(FB).sort(function(p,q){ return (FB[p].i||0)-(FB[q].i||0); }).forEach(function(id){ var f=FB[id]; if(!F[f.c]||!(+f.y)) return; F[f.c].items[f.n]={n:f.n,act:0,bud:f.y/rate*n12,yb:f.y/rate,accs:[]}; F[f.c].bud+=f.y/rate*n12; F[f.c].yb+=f.y/rate; });
+  Object.keys(acc).forEach(function(ns){ var n=+ns, v=acc[ns]; if(Math.abs(v)<0.005) return; if(isRevAcc(n)){ ledR-=v; return; } if(isCogsAcc(n)){ ledC+=v; return; } var k2=plKey(n,v); if(k2==='tax'){ tax+=v; return; } var fo=(n>=2000&&n<=4999)?budFeeOf(n):null; if(fo){ var it=F[fo[0]].items[fo[1]]||(F[fo[0]].items[fo[1]]={n:fo[1],act:0,bud:0,yb:0,accs:[]}); it.act+=v; it.accs.push(ns); F[fo[0]].act+=v; return; } if((n>=2000&&n<=2999)||(n>=8600&&n<=8699)) oth+=v; });
+  var fee={cats:BUDCAT.map(function(c){ var o=F[c]; o.list=Object.keys(o.items).map(function(q){ return o.items[q]; }).sort(function(p,q){ return (p.n==='其他'?1:0)-(q.n==='其他'?1:0); }); return o; }),act:0,bud:0,yb:0}; fee.cats.forEach(function(c){ fee.act+=c.act; fee.bud+=c.bud; fee.yb+=c.yb; });
+  return {a:a,b:b,y:y,rate:rate,rows:rows,unb:unb,tot:tot,fee:fee,tax:tax,oth:oth,ledR:ledR,ledC:ledC,prog:(ib+1)/12,nm:ib-ia+1,pbt:ledR-ledC-fee.act-oth,bpbt:tot.bg-fee.bud}; }
+function budPct(a,b){ return Math.abs(b)<0.005?null:a/b; }
+function budPs(p){ return p===null?'—':(p*100).toFixed(1)+'%'; }
+function budW(v){ return (v/10000).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function budLabel(R){ return R.y+' 年 '+(R.a===R.b?(+R.a)+' 月':(+R.a)+'–'+(+R.b)+' 月'+(R.a==='01'?'累计':'')); }
+function budInit(){ if(!bp||bp.y!==D.bud.y){ var mm=cur.slice(0,4)===D.bud.y?cur.slice(5,7):'12'; bp={y:D.bud.y,a:'01',b:mm}; } }
+function renderBud(){ var has=!!(D.bud&&D.bud.lines); $('bud-empty').hidden=has; $('bud-main').hidden=!has; if(!has) return; budInit(); var opts=function(v){ var h=''; for(var i=1;i<=12;i++){ var s=('0'+i).slice(-2); h+='<option value="'+s+'"'+(s===v?' selected':'')+'>'+i+' 月</option>'; } return h; }; $('bud-a').innerHTML=opts(bp.a); $('bud-b').innerHTML=opts(bp.b); $('bud-mode').value=bmode;
+  var R=budRun(bp.a,bp.b,bmode==='fin'), T=R.tot, h='', row=function(cls,name,r,c,br,bg,sub){ var gp=r-c, bc=br===null?null:br-bg; return '<tr'+(cls?' class="'+cls+'"':'')+'><td'+(sub?' style="padding-left:22px"':'')+'>'+esc(name)+'</td><td class="r">'+budW(r)+'</td><td class="r">'+(br===null?'—':budW(br))+'</td><td class="r">'+(br===null?'—':budPs(budPct(r,br)))+'</td><td class="r">'+budW(c)+'</td><td class="r">'+(bc===null?'—':budW(bc))+'</td><td class="r">'+budW(gp)+'</td><td class="r">'+(bg===null?'—':budW(bg))+'</td><td class="r">'+(bg===null?'—':budPs(budPct(gp,bg)))+'</td></tr>'; };
+  R.rows.forEach(function(x){ if(Math.abs(x.yr)<0.005&&!x.segs.length) return; h+=row('',x.n,x.r,x.c,x.br,x.bg); if(x.segs.length>1) x.segs.forEach(function(s){ h+=row('',s.s,s.r,s.c,null,null,true); }); });
+  R.unb.forEach(function(s){ h+=row('',s.s+'（无预算）',s.r,s.c,null,null); }); h+=row('sum','合计（全部业务）',T.r,T.c,T.br,T.bg); $('bud-rev').innerHTML=h;
+  var fh=''; R.fee.cats.forEach(function(c){ fh+='<tr class="sec"><td>'+c.c+'</td><td class="r">'+budW(c.act)+'</td><td class="r">'+budW(c.bud)+'</td><td class="r">'+budPs(budPct(c.act,c.bud))+'</td><td class="r">'+budW(c.yb)+'</td><td class="r">'+budPs(budPct(c.act,c.yb))+'</td><td></td></tr>'; c.list.forEach(function(it){ if(Math.abs(it.act)<0.005&&Math.abs(it.yb)<0.005) return; fh+='<tr><td style="padding-left:22px">'+esc(it.n)+'</td><td class="r">'+budW(it.act)+'</td><td class="r">'+(it.yb?budW(it.bud):'—')+'</td><td class="r">'+(it.yb?budPs(budPct(it.act,it.bud)):'—')+'</td><td class="r">'+(it.yb?budW(it.yb):'—')+'</td><td class="r">'+(it.yb?budPs(budPct(it.act,it.yb)):'—')+'</td><td class="note">'+esc(it.accs.sort().join('、'))+'</td></tr>'; }); });
+  fh+='<tr class="sum"><td>费用合计</td><td class="r">'+budW(R.fee.act)+'</td><td class="r">'+budW(R.fee.bud)+'</td><td class="r">'+budPs(budPct(R.fee.act,R.fee.bud))+'</td><td class="r">'+budW(R.fee.yb)+'</td><td class="r">'+budPs(budPct(R.fee.act,R.fee.yb))+'</td><td></td></tr>'; $('bud-fee').innerHTML=fh;
+  var gp=T.r-T.c; $('bud-tiles').innerHTML=[['收入完成率',budPs(budPct(T.r,T.br)),budW(T.r)+' / '+budW(T.br)],['毛利完成率',budPs(budPct(gp,T.bg)),budW(gp)+' / '+budW(T.bg)],['费用使用率',budPs(budPct(R.fee.act,R.fee.bud)),budW(R.fee.act)+' / '+budW(R.fee.bud)],['利润总额（税前）',budW(R.pbt),'同期预算 '+budW(R.bpbt)],['时间进度',(R.prog*100).toFixed(1)+'%','截至 '+(+R.b)+' 月']].map(function(t){ return '<div class="tile"><small>'+t[0]+'</small><strong>'+t[1]+'</strong><small>'+t[2]+'</small></div>'; }).join('');
+  var dr=r2(T.r-R.ledR), dc=r2(T.c-R.ledC), msg=[]; if(Math.abs(dr)>=0.01) msg.push('板块收入合计比账面收入'+(dr>0?'多 ':'少 ')+fmt(Math.abs(dr))+' 欧元'); if(Math.abs(dc)>=0.01) msg.push('板块成本合计比账面成本'+(dc>0?'多 ':'少 ')+fmt(Math.abs(dc))+' 欧元');
+  $('bud-info').innerHTML=budLabel(R)+'　·　单位：万欧元　·　预算按 1 欧元 = '+R.rate+' 元人民币折算，费用预算按全年数平均到 12 个月　·　预算文件：'+esc(D.bud.file||'')+(msg.length?'<br><span style="color:var(--bad)">'+msg.join('；')+'。请检查分录的业务板块是否选对。</span>':'<br>板块合计与账面收入、成本一致。')+((Math.abs(R.oth)>=0.005||Math.abs(R.tax)>=0.005)?'<br>不计入费用的项目：其他损益（营业外等）'+budW(-R.oth)+'，所得税和营业税 '+budW(R.tax)+'。':'');
+  var nk=bp.a+'-'+bp.b; if(document.activeElement!==$('bud-note')) $('bud-note').value=((D.budc&&D.budc.notes)||{})[nk]||''; $('bud-note').dataset.k=nk;
+  var lines=budLines(), S=segLines(R.y+'-12'); $('bud-map').innerHTML=S.segs.map(function(s){ var v=budLineOf(s,lines); return '<tr><td>'+esc(s)+'</td><td><select data-budmap="'+esc(s)+'" style="width:auto"><option value="-">不对应预算行（单独列示）</option>'+lines.map(function(l){ return '<option value="'+l.id+'"'+(l.id===v?' selected':'')+'>'+esc(l.n)+'</option>'; }).join('')+'</select></td></tr>'; }).join(''); }
+function impBud(file){ if(typeof XLSX==='undefined'){ toast('导入组件没有加载成功，请检查网络后刷新'); return; }
+  file.arrayBuffer().then(function(buf){ var wb=XLSX.read(buf,{type:'array'}), sr=null, sf=null; wb.SheetNames.forEach(function(n){ if(n.indexOf('德国')<0) return; if(n.indexOf('费用')>-1) sf=n; else if(n.indexOf('月度')>-1||n.indexOf('整体')>-1) sr=n; }); if(!sr){ toast('文件里没有找到鲁商德国的预算分解页'); return; }
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[sr],{header:1,raw:true,defval:''}), hi=-1, mc=-1, year=''; for(var i=0;i<Math.min(rows.length,8);i++){ var j=(rows[i]||[]).map(function(c){ return String(c).replace(/\s/g,''); }).indexOf('1月'); if(j>-1){ hi=i; mc=j; } (rows[i]||[]).forEach(function(c){ var m=/(20\d\d)年(合计|财务预算)/.exec(String(c)); if(m&&(!year||/合计/.test(String(c)))) year=m[1]; }); } if(hi<0){ toast('预算页里没有找到“1月”这一列'); return; } if(!year) year=cur.slice(0,4);
+    var sec='', L={}, ord=[], totR=0, totG=0, cl=function(s){ return String(s).replace(/\s/g,'').replace(/^\d+、/,'').replace(/(收入|毛利)$/,''); };
+    rows.slice(hi+1).forEach(function(r){ var h0=String(r[0]||'').replace(/\s/g,''); if(/^一、/.test(h0)){ sec='r'; totR=+r[mc-1]||0; return; } if(/^二、/.test(h0)){ sec='g'; totG=+r[mc-1]||0; return; } if(/^[三四五六七八九]、/.test(h0)){ sec=''; return; } if(!sec) return; var nm=cl(r[1]); if(!nm) return; var ms=[], any=false; for(var q=0;q<12;q++){ var v=+r[mc+q]||0; ms.push(v); if(v) any=true; } if(!any&&!(+r[mc-1])) return; if(!any&&+r[mc-1]) for(var q2=0;q2<12;q2++) ms[q2]=(+r[mc-1])/12; var o=L[nm]; if(!o){ o=L[nm]={n:nm,i:ord.length,r:[0,0,0,0,0,0,0,0,0,0,0,0],g:[0,0,0,0,0,0,0,0,0,0,0,0]}; ord.push(nm); } o[sec]=ms; });
+    if(!ord.length){ toast('预算页里没有读到收入预算'); return; } var lines={}; ord.forEach(function(nm,i){ lines['L'+i]=L[nm]; });
+    var fee={}, fi=0, ft=0; if(sf){ XLSX.utils.sheet_to_json(wb.Sheets[sf],{header:1,raw:true,defval:''}).forEach(function(r){ var code=String(typeof r[0]==='number'?Math.round(r[0]):r[0]).trim(), nm=String(r[2]||'').trim(), y=+r[3]||0; if(!/^660[123]\d{3}$/.test(code)||!y) return; var c=code.slice(0,4)==='6601'?'销售费用':code.slice(0,4)==='6602'?'管理费用':'财务费用'; fee['F'+fi]={c:c,n:nm.replace(/^(销售|管理|财务)费用-/,''),y:y,i:fi}; fi++; ft+=y; }); }
+    var sumR=0, sumG=0; ord.forEach(function(nm){ L[nm].r.forEach(function(v){ sumR+=v; }); L[nm].g.forEach(function(v){ sumG+=v; }); });
+    var obj={y:year,rate:(D.bud&&D.bud.rate)||8,file:file.name,t:Date.now(),lines:lines,fee:fee}, w=function(v){ return (v/10000).toLocaleString('en-US',{maximumFractionDigits:2}); };
+    ask('导入 '+year+' 年预算吗？','读到鲁商德国 '+ord.length+' 条业务预算：'+ord.join('、')+'。\n全年收入预算 '+w(sumR)+' 万元'+(Math.abs(sumR-totR)>1?'（表上合计行是 '+w(totR)+' 万元，不一致，请检查）':'，与表上合计一致')+'；毛利预算 '+w(sumG)+' 万元；费用预算 '+w(ft)+' 万元（'+fi+' 项）。\n按 1 欧元 = '+obj.rate+' 元人民币折算。再次导入会覆盖原来的预算。','导入').then(function(yes){ if(!yes) return; glRef('bud').set(clean(obj)); bp=null; toast('已导入 '+year+' 年预算'); }); },function(){ toast('读不了这个文件'); }); }
+function xBud(){ if(typeof ExcelJS==='undefined'){ toast('导出组件没有加载成功，请检查网络后刷新'); return; } if(!(D.bud&&D.bud.lines)) return; budInit(); var R=budRun(bp.a,bp.b,bmode==='fin'), T=R.tot, wb=new ExcelJS.Workbook(), lab=budLabel(R), W=function(v){ return v/10000; }, NF='#,##0.00;-#,##0.00;-', PF='0.0%;-0.0%;-', ver=bmode==='fin'?'事务所最终版':'内部暂时版';
+  var mk=function(name,title,head,rows,w,fmts){ var ws=wb.addWorksheet(name); ws.addRow(['鲁商德国 '+title+'　'+lab]).getCell(1).font={size:13,bold:true}; ws.addRow(['单位：万欧元　·　'+ver+'　·　预算按 1 欧元 = '+R.rate+' 元人民币折算　·　时间进度 '+(R.prog*100).toFixed(1)+'%']); var h=ws.addRow(head); h.eachCell(function(c){ c.font={bold:true}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0E2A47'}}; }); rows.forEach(function(r){ var x=ws.addRow(r.v); x.eachCell(function(c,j){ if(r.b) c.font={bold:true}; if(r.sec) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD9E4F0'}}; if(typeof c.value==='number') c.numFmt=fmts[j-1]||NF; }); }); w.forEach(function(v,i){ ws.getColumn(i+1).width=v; }); return ws; };
+  var rr=[], line=function(name,r,c,br,bg,o){ var gp=r-c; rr.push(Object.assign({v:[name,W(r),br===null?'—':W(br),br===null?'—':(budPct(r,br)===null?'—':budPct(r,br)),W(c),br===null?'—':W(br-bg),W(gp),bg===null?'—':W(bg),bg===null?'—':(budPct(gp,bg)===null?'—':budPct(gp,bg))]},o||{})); };
+  R.rows.forEach(function(x){ if(Math.abs(x.yr)<0.005&&!x.segs.length) return; line(x.n,x.r,x.c,x.br,x.bg); if(x.segs.length>1) x.segs.forEach(function(s){ line('　· '+s.s,s.r,s.c,null,null); }); }); R.unb.forEach(function(s){ line(s.s+'（无预算）',s.r,s.c,null,null); }); line('合计（全部业务）',T.r,T.c,T.br,T.bg,{b:1});
+  var ws1=mk('收入成本毛利','预算完成情况（收入、成本、毛利）',['业务板块','实际收入','收入预算','收入完成率','实际成本','成本预算','实际毛利','毛利预算','毛利完成率'],rr,[30,14,14,12,14,14,14,14,12],[null,NF,NF,PF,NF,NF,NF,NF,PF]);
+  var note=((D.budc&&D.budc.notes)||{})[bp.a+'-'+bp.b]||''; if(note){ ws1.addRow([]); ws1.addRow(['说明：'+note]); }
+  var fr=[]; R.fee.cats.forEach(function(c){ fr.push({sec:1,b:1,v:[c.c,W(c.act),W(c.bud),budPct(c.act,c.bud)===null?'—':budPct(c.act,c.bud),W(c.yb),budPct(c.act,c.yb)===null?'—':budPct(c.act,c.yb),'']}); c.list.forEach(function(it){ if(Math.abs(it.act)<0.005&&Math.abs(it.yb)<0.005) return; fr.push({v:['　'+it.n,W(it.act),it.yb?W(it.bud):'—',it.yb?budPct(it.act,it.bud):'—',it.yb?W(it.yb):'—',it.yb?budPct(it.act,it.yb):'—',it.accs.sort().join('、')]}); }); }); fr.push({b:1,v:['费用合计',W(R.fee.act),W(R.fee.bud),budPct(R.fee.act,R.fee.bud)===null?'—':budPct(R.fee.act,R.fee.bud),W(R.fee.yb),budPct(R.fee.act,R.fee.yb)===null?'—':budPct(R.fee.act,R.fee.yb),'']});
+  mk('费用','预算完成情况（费用）',['费用项目','实际','同期预算','使用率','全年预算','占全年预算','对应的事务所科目'],fr,[30,14,14,12,14,12,36],[null,NF,NF,PF,NF,PF,null]);
+  var gp=T.r-T.c; mk('汇总','预算完成情况（汇总）',['指标','实际','同期预算','完成率 / 使用率','全年预算','占全年预算'],[{v:['收入',W(T.r),W(T.br),budPct(T.r,T.br)===null?'—':budPct(T.r,T.br),W(T.yr),budPct(T.r,T.yr)===null?'—':budPct(T.r,T.yr)]},{v:['成本',W(T.c),W(T.br-T.bg),budPct(T.c,T.br-T.bg)===null?'—':budPct(T.c,T.br-T.bg),W(T.yr-T.yg),budPct(T.c,T.yr-T.yg)===null?'—':budPct(T.c,T.yr-T.yg)]},{v:['毛利',W(gp),W(T.bg),budPct(gp,T.bg)===null?'—':budPct(gp,T.bg),W(T.yg),budPct(gp,T.yg)===null?'—':budPct(gp,T.yg)]},{v:['费用',W(R.fee.act),W(R.fee.bud),budPct(R.fee.act,R.fee.bud)===null?'—':budPct(R.fee.act,R.fee.bud),W(R.fee.yb),budPct(R.fee.act,R.fee.yb)===null?'—':budPct(R.fee.act,R.fee.yb)]},{v:['其他损益（营业外等，收益为正）',W(-R.oth),'—','—','—','—']},{b:1,v:['利润总额（税前）合计',W(R.pbt),W(R.bpbt),'—',W(T.yg-R.fee.yb),'—']}],[34,14,14,16,14,14],[null,NF,NF,PF,NF,PF]);
+  tidyWB(wb,{}); wb.xlsx.writeBuffer().then(function(b){ dlBlob(new Blob([b]),'鲁商德国_预算完成情况_'+R.y+(R.a===R.b?R.a:R.a+'-'+R.b)+'_'+ver+'.xlsx'); toast('已导出预算完成情况：'+lab); }); }
 /* ---------- 导出 ---------- */
 function dlBlob(blob,name){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500); }
 function b64buf(s){ var bin=atob(s), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; }
@@ -1073,7 +1158,11 @@ function init(){ if(!rtdb){ $('gate').hidden=false; $('gate').innerHTML='<div cl
 $('mon').addEventListener('change',function(){ if(!this.value) return; cur=this.value; drill=null; try{ localStorage.setItem('gl_last',cur); }catch(e){} clearForm(); render(); });
 $('f-add').addEventListener('click',function(){ saveEntry(); }); $('f-cancel').addEventListener('click',function(){ clearForm(); });
 ['f-dr','f-cr'].forEach(function(i){ $(i).addEventListener('input',hint); }); $('f-tpl').addEventListener('change',function(){ var tp=TPLS.find(function(x){return x[0]===$('f-tpl').value;}); if(tp){ if(/^\d+$/.test(tp[2])&&!$('f-dr').value) $('f-dr').value=tp[2]; if(/^\d+$/.test(tp[3])&&!$('f-cr').value) $('f-cr').value=tp[3]; } hint(); });
-$('dv-imp').addEventListener('click',function(){ $('dv-file').click(); }); $('dv-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impDatev(f); });
+$('bud-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impBud(f); }); $('bud-x').addEventListener('click',xBud);
+$('bud-a').addEventListener('change',function(){ bp.a=this.value; if(bp.b<bp.a) bp.b=bp.a; render(); }); $('bud-b').addEventListener('change',function(){ bp.b=this.value; if(bp.a>bp.b) bp.a=bp.b; render(); }); $('bud-mode').addEventListener('change',function(){ bmode=this.value; render(); });
+$('bud-note').addEventListener('change',function(){ glRef('budc/notes/'+this.dataset.k).set(this.value.trim()||null); toast('说明已保存'); });
+document.addEventListener('change',function(e){ var t=e.target; if(t&&t.dataset&&t.dataset.budmap!==undefined){ glRef('budc/map/'+budEnc(t.dataset.budmap)).set(t.value); toast('已保存对应关系'); } });
+$('dv-imp').addEventListener('click',function(){ $('dv-file').click(); }); $('dv-tpl').addEventListener('click',dvTpl); $('dv-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impDatev(f); });
 $('imp').addEventListener('click',function(){ $('imp-file').click(); }); $('imp-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impEntries(f); });
 $('b-imp').addEventListener('click',function(){ $('b-file').click(); }); $('b-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impBase(f); });
 $('c-imp').addEventListener('click',function(){ $('c-file').click(); }); $('c-file').addEventListener('change',function(){ var f=this.files[0]; this.value=''; if(f) impCF(f); });
@@ -1109,6 +1198,8 @@ document.addEventListener('click',function(e){ var t=e.target; if(!t.dataset) re
   if(t.dataset.invadj){ var df=+t.dataset.amt, ac=t.dataset.invadj, yy=+cur.slice(0,4), mm=+cur.slice(5,7), ld=new Date(yy,mm,0).getDate(); clearForm(); $('f-date').value=cur+'-'+('0'+ld).slice(-2); if(ac==='tr'){ $('f-dr').value='3980'; $('f-cr').value='3981'; $('f-text').value='在途商品到库，转为在库（按库存台账）'; } else { $('f-dr').value=df>0?ac:'3950'; $('f-cr').value=df>0?'3950':ac; $('f-text').value='月末库存调整（按库存台账）'; } $('f-amt').value=String(Math.abs(df)).replace('.',','); tab='je'; render(); hint(); toast('已带出调整分录，请选好业务板块后保存'); $('f-h').scrollIntoView({behavior:'smooth'}); return; }
   if(t.dataset.drill){ drill=t.dataset.drill; tab='je'; render(); return; }
   var M=D.e[cur]||{};
+  if(t.dataset.budimp){ $('bud-file').click(); return; }
+  if(t.dataset.budq&&D.bud){ var q=t.dataset.budq, cm=cur.slice(0,4)===D.bud.y?cur.slice(5,7):'12', Q={q1:['01','03'],q2:['04','06'],q3:['07','09'],q4:['10','12'],y:['01','12'],ytd:['01',cm],m:[cm,cm]}[q]; bp={y:D.bud.y,a:Q[0],b:Q[1]}; render(); return; }
   if(t.dataset.goto){ tab=t.dataset.goto; render(); window.scrollTo(0,0); return; }
   if(t.dataset.pf){ if(locked(cur)){ lockMsg(cur); return; } var px=M[t.dataset.pf]; if(px){ if(px.pf) delete px.pf; else px.pf={n:me||'',t:Date.now()}; store(); render(); toast(px.pf?'已标为证明已齐':'已改回证明未齐'); } return; }
   if(t.dataset.rv){ rvSet([t.dataset.rv]); return; }
@@ -1120,7 +1211,7 @@ document.addEventListener('click',function(e){ var t=e.target; if(!t.dataset) re
   if(t.dataset.bdel){ var bk=t.dataset.bdel; ask('删除 '+bk+' 的事务所余额表吗？','之后的四表会改用更早的一期作为基数。可以随时重新导入。','删除').then(function(ok){ if(ok) glRef('base/'+bk).remove(); }); return; }
   if(t.dataset.cdel){ var ck=t.dataset.cdel; ask('删除 '+ck+' 的现金流量表基数吗？','可以随时重新导入。','删除').then(function(ok){ if(ok) glRef('cf/'+ck).remove(); }); return; }
 });
-window.__gl={data:function(){return D;},compute:compute,op:function(m,f){ return opRun(m,f); },mc:function(m){ return mcData(m||cur); },vt:function(m){ return vatTrack(m||cur); },sets:function(){ return repSets(compute(cur,repMode==='fin')); }};
+window.__gl={data:function(){return D;},compute:compute,op:function(m,f){ return opRun(m,f); },mc:function(m){ return mcData(m||cur); },bud:function(a,b,f){ return budRun(a,b,f); },vt:function(m){ return vatTrack(m||cur); },sets:function(){ return repSets(compute(cur,repMode==='fin')); }};
 init();
 })();
 </script>
