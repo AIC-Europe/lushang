@@ -989,11 +989,15 @@ function vatTrack(m){ var y=m.slice(0,4), rows=[], mv=[], k=y+'-01';
   Object.keys(D.e).filter(function(q){ return q.slice(0,4)===y&&q<=m; }).sort().forEach(function(q){ monE(q).forEach(function(x){ var d=+x.dr, c=+x.cr; if(isCash(d)&&isVatSettle(c)) mv.push({date:x.date,v:x.amt,text:x.text||x.party||''}); else if(isVatSettle(d)&&isCash(c)) mv.push({date:x.date,v:-x.amt,text:x.text||x.party||''}); }); });
   mv.sort(function(a,b){ return a.date<b.date?-1:1; }); var un=[];
   mv.forEach(function(p){ var hit=null; rows.forEach(function(r){ if(hit||r.got) return; if(r.k<p.date.slice(0,7)&&Math.abs(-r.v-p.v)<0.01) hit=r; }); if(hit){ hit.got=true; hit.d=p.date; } else un.push(p); });
+  /* 一笔到账合并了相邻几个月（税务局常把两三个月的退税一次打过来）：在还没对上的月份里找连续的一段，合计正好等于这笔 */
+  un=un.filter(function(p){ var pm=p.date.slice(0,7), c=rows.filter(function(r){ return !r.got&&r.k<pm; });
+    for(var i=0;i<c.length;i++){ var s=0; for(var j=i;j<c.length&&j<i+6;j++){ s+=-c[j].v; if(j>i&&Math.abs(s-p.v)<0.01){ for(var q=i;q<=j;q++){ c[q].got=true; c[q].d=p.date; c[q].joint=j-i+1; } return false; } } }
+    return true; });
   var open=0, openM=[], late=[], now=new Date(); rows.forEach(function(r){ if(r.got) return; if(r.v<0){ open+=-r.v; openM.push(r.k); } var nk=nextMon(r.k), due=new Date(+nk.slice(0,4),+nk.slice(5,7)-1,10); r.wait=Math.floor((now-due)/86400000); if(r.wait>30&&r.v<0) late.push(r.k); });
   var C=compute(m,false), prior=0; ['1790','1791','1792','1793'].forEach(function(a){ var A=C.A[a]; if(A) prior+=A.base+A.ad-A.ac; });
   return {rows:rows,un:un,open:r2(open),unSum:r2(un.reduce(function(s,p){ return s+p.v; },0)),openM:openM,late:late,prior:r2(prior)}; }
 function renderVt(){ var T=vatTrack(cur), h='';
-  T.rows.forEach(function(r){ var ref=r.v<0; h+='<tr><td>'+r.k+'</td><td class="r">'+fmt(-r.v)+'</td><td>'+(ref?'应退':'应缴')+' <span class="note">'+r.src+'</span></td><td>'+(r.got?dde(r.d):'')+'</td><td>'+(r.got?'<span class="chip ok">'+(ref?'已到账':'已缴')+'</span>':(r.wait>30?'<span class="chip bad">'+(ref?'未到账':'未缴')+'，申报后已过 '+r.wait+' 天</span>':r.wait>=0?'<span class="chip warn">'+(ref?'未到账':'未缴')+'，申报后 '+r.wait+' 天</span>':'<span class="note">还没到申报日</span>'))+'</td></tr>'; });
+  T.rows.forEach(function(r){ var ref=r.v<0; h+='<tr><td>'+r.k+'</td><td class="r">'+fmt(-r.v)+'</td><td>'+(ref?'应退':'应缴')+' <span class="note">'+r.src+'</span></td><td>'+(r.got?dde(r.d):'')+'</td><td>'+(r.got?'<span class="chip ok">'+(ref?'已到账':'已缴')+'</span>'+(r.joint?' <span class="note">与相邻共 '+r.joint+' 个月合并一笔</span>':''):(r.wait>30?'<span class="chip bad">'+(ref?'未到账':'未缴')+'，申报后已过 '+r.wait+' 天</span>':r.wait>=0?'<span class="chip warn">'+(ref?'未到账':'未缴')+'，申报后 '+r.wait+' 天</span>':'<span class="note">还没到申报日</span>'))+'</td></tr>'; });
   if(!T.rows.length) h='<tr><td colspan="5" class="note">本年还没有增值税数据。</td></tr>';
   h+='<tr class="sum"><td>还没有到账的应退合计</td><td class="r">'+fmt(T.open)+'</td><td colspan="3">'+(T.openM.length?T.openM.join('、'):'全部已到账')+'</td></tr>';
   $('vt-body').innerHTML=h;
