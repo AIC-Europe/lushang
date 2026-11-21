@@ -1129,7 +1129,7 @@ function budRun(a,b,fin){ var B=D.bud, y=B.y, rate=B.rate||8, ia=+a-1, ib=+b-1, 
   return {a:a,b:b,y:y,rate:rate,rows:rows,unb:unb,tot:tot,fee:fee,tax:tax,oth:oth,othA:othA,ledR:ledR,ledC:ledC,prog:(ib+1)/12,nm:ib-ia+1,pbt:ledR-ledC-fee.act-oth,bpbt:tot.bg-fee.bud}; }
 /* ---------- 报表一致性检查：同一期间、同一版本，几张表的同一个数必须相等 ---------- */
 function consCheck(m,fin){ var mo=m.slice(5,7), C=compute(m,fin), S=segSum(m), sr={m:0,y:0}, sc={m:0,y:0}, rows=[], bad=0; S.segs.forEach(function(s){ var t=S.T[s]; sr.m+=t.rm; sr.y+=t.ry; sc.m+=t.cm; sc.y+=t.cy; });
-  var Rm=null, Ry=null; try{ if(D.bud&&String(D.bud.y)===m.slice(0,4)){ Rm=budRun(mo,mo,fin); Ry=budRun('01',mo,fin); } }catch(e){ Rm=Ry=null; }
+  var Rm=null, Ry=null; try{ budPick(); if(D.bud&&D.bud.lines&&String(D.bud.y)===m.slice(0,4)){ Rm=budRun(mo,mo,fin); Ry=budRun('01',mo,fin); } }catch(e){ Rm=Ry=null; }
   var nr={m:0,y:0}; Object.keys(C.A).forEach(function(n){ var a=C.A[n], nn=+n; if(!isPL(nn)||(nn>=3970&&nn<=3989)||isRevAcc(nn)) return; var yv=a.ytd0+a.ad-a.ac; if(plKey(nn,yv)!=='rev') return; nr.m-=(a.md-a.mc); nr.y-=yv; });
   var add=function(name,vals){ vals=vals.filter(function(v){ return v[1]!==null&&v[1]!==undefined; }).map(function(v){ return [v[0],r2(v[1])]; }); var mn=Math.min.apply(null,vals.map(function(v){ return v[1]; })), mx=Math.max.apply(null,vals.map(function(v){ return v[1]; })), ok=vals.length<2||r2(mx-mn)<0.015; if(!ok) bad++; rows.push({name:name,vals:vals,ok:ok,diff:r2(mx-mn)}); };
   [['m','本月',Rm],['y','本年累计',Ry]].forEach(function(p){ var f=p[0], R=p[2];
