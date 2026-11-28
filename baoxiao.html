@@ -59,6 +59,8 @@ tr.sum td{font-weight:600;background:#fafbfc}
 ul.iss{margin:0;padding-left:18px}
 ul.iss li{margin:3px 0}
 .ro .edit{display:none!important}
+.nohq .hq{display:none!important}
+#hq-fy label span{font-size:11px}
 .ovl{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
 .dlg{background:#fff;border-radius:12px;padding:18px 20px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 .dlg h3{margin:0 0 8px;font-size:16px}
@@ -91,6 +93,7 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
       <span style="flex:1"></span>
       <button class="btn pri" id="x-travel">导出 出差报销表</button>
       <button class="btn pri" id="x-daily">导出 日常报销表</button>
+      <button class="btn pri hq" id="x-fy">导出 费用项目汇总</button>
       <button class="btn pri edit" id="x-book">导出 记账行</button>
     </div>
     <p class="note edit" style="margin:8px 0 0">数据实时保存在共享数据库里，团队成员打开页面看到的是同一份。</p>
@@ -110,6 +113,15 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
         <div><button class="btn pri" id="s-add">添加标准</button></div>
       </div>
       <div class="wrap" style="margin-top:10px"><table style="min-width:600px"><thead><tr><th>类别</th><th>名称</th><th class="r">上限</th><th>单位</th><th></th></tr></thead><tbody id="s-list"></tbody></table></div>
+      <div class="hq" id="hq-box" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <b>集团出国标准（2026 年 11 月起使用）</b>
+        <p class="note">住宿按“标准 × 晚数”封顶，伙食按天包干，公杂不发。外币标准按下面的本月汇率折成欧元，汇率每月填一次，外币票据也默认用它。</p>
+        <div class="grid" id="hq-fx"></div>
+        <div class="grid" style="margin-top:10px"><label class="w2">查找国家或城市（共 268 行，可以直接改数）<input id="hq-q" type="search" value="德国"></label></div>
+        <div class="wrap" style="margin-top:8px"><table style="min-width:760px"><thead><tr><th>序号</th><th>国家（地区）</th><th>城市</th><th>币种</th><th class="r">住宿／天</th><th class="r">伙食／天</th><th class="r">公杂／天</th><th></th></tr></thead><tbody id="hq-list"></tbody></table></div>
+        <p style="margin:14px 0 6px"><b>日常报销的类别对应哪个集团费用项目</b> <span class="note">挂在出差单下的票据一律归 FY019001 日常出差，招待和礼品归 FY020001 业务招待费。</span></p>
+        <div class="grid" id="hq-fy"></div>
+      </div>
     </details>
   </div>
 
@@ -118,7 +130,12 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
     <div class="grid edit">
       <label class="w2">申请事由<input id="a-title" placeholder="例：20261013-20261018 走访客户"></label>
       <label>预算（欧元）<input id="a-bud" inputmode="decimal" placeholder="可不填"></label>
-      <div><button class="btn pri" id="a-add">添加申请</button></div>
+      <label class="hq">类型<select id="a-kind"><option value="trip">出差</option><option value="ent">招待</option></select></label>
+      <label class="hq">出发日期（招待填当天）<input type="date" id="a-from"></label>
+      <label class="hq">返回日期<input type="date" id="a-to"></label>
+      <label class="hq">审批完成日期<input type="date" id="a-appr"></label>
+      <label class="hq w2">主要目的地（套用哪条标准）<select id="a-city"></select></label>
+      <div class="bar"><button class="btn pri" id="a-add">添加申请</button><button class="btn" id="a-cancel" hidden>取消修改</button></div>
     </div>
     <div class="wrap" style="margin-top:10px"><table><thead><tr><th>编号</th><th>事由</th><th class="r">预算</th><th class="r">已录金额</th><th>状态</th><th>审批件</th><th></th></tr></thead><tbody id="a-list"></tbody></table></div>
   </div>
@@ -131,7 +148,7 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
       <label>类别<select id="f-cat"></select></label>
       <label>税率<select id="f-vat"><option value="0">0%（境外或无税）</option><option value="7">7%</option><option value="19">19%</option></select></label>
       <label>票面金额<input id="f-orig" inputmode="decimal"></label>
-      <label>币种<select id="f-cur"><option>EUR</option><option>CNY</option><option>USD</option><option>CHF</option><option>GBP</option></select></label>
+      <label>币种<select id="f-cur"><option>EUR</option><option>CNY</option><option>USD</option><option>CHF</option><option>GBP</option><option>HKD</option><option>JPY</option></select></label>
       <label>汇率（1 欧元 = ? 外币）<input id="f-fx" inputmode="decimal" placeholder="欧元票据不填"></label>
       <label>适用标准<select id="f-std"></select></label>
       <label id="f-qty-l">数量<input id="f-qty" inputmode="decimal" placeholder="1"></label>
@@ -139,6 +156,7 @@ textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospa
       <label class="w2">发票号<input id="f-no"></label>
       <label>供应商（开票方）<input id="f-ven" placeholder="例：Europcar"></label>
       <label class="w2">补充说明（酒店名和晚数、招待对象等）<input id="f-note"></label>
+      <label class="hq w2" style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="f-att" style="width:auto"><span id="f-att-t">附件已齐</span></label>
       <label class="w2">发票文件（可多选，保存时一起上传）<input type="file" id="f-file" multiple></label>
       <div class="bar"><button class="btn pri" id="f-add">保存这张票据</button><button class="btn" id="f-cancel" hidden>取消修改</button></div>
     </div>
@@ -234,7 +252,7 @@ var CATS=[
 var CAT={}; CATS.forEach(function(c){CAT[c[0]]={k:c[0],cn:c[1],de:c[2],cnl:c[3],acc:c[4],vat:c[5]};});
 var MDE=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 var MEN=['January','February','March','April','May','June','July','August','September','October','November','December'];
-var D={emp:'',months:{},stds:[],pays:[],files:[]}, cur='', edit=null, bulk=[], oneFor='', busyUp=false;
+var D={emp:'',months:{},stds:[],pays:[],files:[],hq:{}}, cur='', edit=null, bulk=[], oneFor='', busyUp=false;
 var $=function(id){return document.getElementById(id);};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function num(v){ var s=String(v==null?'':v).trim().replace(/\s/g,''); if(!s) return NaN; var c=s.lastIndexOf(','),d=s.lastIndexOf('.'); if(c>-1&&d>-1){ s=c>d?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,''); } else if(c>-1) s=s.replace(',','.'); var n=parseFloat(s); return isFinite(n)?n:NaN; }
@@ -254,8 +272,8 @@ function sidOf(code){ return crypto.subtle.digest('SHA-256',new TextEncoder().en
 function newCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', u=new Uint8Array(20), s=''; crypto.getRandomValues(u); for(var i=0;i<20;i++){ s+=A[u[i]%32]; if(i%4===3&&i<19) s+='-'; } return s; }
 function bxRef(p){ return rtdb.ref('spaces/'+SP+'/bx'+(p?'/'+p:'')); }
 function arr(o){ return Object.keys(o||{}).map(function(k){ var x=o[k]; x.id=k; return x; }).sort(function(a,b){ return (a.t||0)-(b.t||0); }); }
-function fromVal(v){ v=v||{}; var o={emp:v.emp||'',stds:arr(v.stds),pays:arr(v.pays),files:arr(v.files),months:{},last:D.last}; Object.keys(v.m||{}).forEach(function(k){ var all=arr(v.m[k].items); o.months[k]={ants:arr(v.m[k].ants),items:all.filter(function(x){return !x.del;}),trash:all.filter(function(x){return x.del;})}; }); return o; }
-function flat(){ var f={}, t=Date.now(), n=0; f.emp=D.emp||null; D.stds.forEach(function(s){ if(!s.t) s.t=t+(n++); f['stds/'+s.id]=s; }); (D.pays||[]).forEach(function(s){ if(!s.t) s.t=t+(n++); f['pays/'+s.id]=s; }); (D.files||[]).forEach(function(s){ f['files/'+s.id]=s; });
+function fromVal(v){ v=v||{}; var o={emp:v.emp||'',stds:arr(v.stds),pays:arr(v.pays),files:arr(v.files),months:{},last:D.last,hq:v.hq||{}}; Object.keys(v.m||{}).forEach(function(k){ var all=arr(v.m[k].items); o.months[k]={ants:arr(v.m[k].ants),items:all.filter(function(x){return !x.del;}),trash:all.filter(function(x){return x.del;})}; }); return o; }
+function flat(){ var f={}, t=Date.now(), n=0; f.emp=D.emp||null; f.hq=(D.hq&&Object.keys(D.hq).length)?D.hq:null; D.stds.forEach(function(s){ if(!s.t) s.t=t+(n++); f['stds/'+s.id]=s; }); (D.pays||[]).forEach(function(s){ if(!s.t) s.t=t+(n++); f['pays/'+s.id]=s; }); (D.files||[]).forEach(function(s){ f['files/'+s.id]=s; });
   Object.keys(D.months).forEach(function(k){ var m=D.months[k]; m.ants.forEach(function(a){ if(!a.t) a.t=t+(n++); f['m/'+k+'/ants/'+a.id]=a; }); m.items.concat(m.trash||[]).forEach(function(x){ if(!x.t) x.t=t+(n++); f['m/'+k+'/items/'+x.id]=x; }); }); return f; }
 function clean(o){ return JSON.parse(JSON.stringify(o)); }
 /* 把内存里的改动同步到数据库：只写有变化的条目 */
@@ -266,7 +284,7 @@ function store(){ try{ localStorage.setItem('bx_last',cur); }catch(e){} if(RO||!
   bxRef('').update(u).then(function(){ $('sync').textContent='已保存'; },function(){ $('sync').textContent='保存失败'; toast('保存失败，请检查网络'); }); }
 function snapFlat(){ var f=flat(), o={}; Object.keys(f).forEach(function(k){ o[k]=f[k]===null?null:JSON.stringify(f[k]); }); return o; }
 function onData(v){ D=fromVal(v); VIEWER=(v&&v.viewer)||{}; lastFlat=snapFlat(); ready=true; render(); fillStd($('f-std').dataset.cat===$('f-cat').value?$('f-std').value:undefined); mirror(v); }
-function mirror(v){ var ids=Object.keys(VIEWER); if(RO||!ids.length) return; clearTimeout(mirT); mirT=setTimeout(function(){ var mm=JSON.parse(JSON.stringify((v&&v.m)||{})); Object.keys(mm).forEach(function(k){ var it=mm[k].items||{}; Object.keys(it).forEach(function(i){ if(it[i].del) delete it[i]; }); }); var d={emp:(v&&v.emp)||'',m:Object.keys(mm).length?mm:null,stds:(v&&v.stds)||null,pays:(v&&v.pays)||null,files:(v&&v.files)||null,upd:Date.now()}; ids.forEach(function(sid){ rtdb.ref('bxview/'+sid).set(clean(d)).catch(function(){}); }); },1200); }
+function mirror(v){ var ids=Object.keys(VIEWER); if(RO||!ids.length) return; clearTimeout(mirT); mirT=setTimeout(function(){ var mm=JSON.parse(JSON.stringify((v&&v.m)||{})); Object.keys(mm).forEach(function(k){ var it=mm[k].items||{}; Object.keys(it).forEach(function(i){ if(it[i].del) delete it[i]; }); }); var d={emp:(v&&v.emp)||'',m:Object.keys(mm).length?mm:null,stds:(v&&v.stds)||null,pays:(v&&v.pays)||null,files:(v&&v.files)||null,hq:(v&&v.hq)||null,upd:Date.now()}; ids.forEach(function(sid){ rtdb.ref('bxview/'+sid).set(clean(d)).catch(function(){}); }); },1200); }
 function load(){ try{ D.last=localStorage.getItem('bx_last')||''; }catch(e){} }
 function letter(i){ var s=''; i++; while(i>0){ var m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
 /* 编号：申请按添加顺序 A、B、C…，票据在申请内按录入顺序；日常按日期 */
@@ -279,8 +297,8 @@ function numbered(){
 function desc(x){ if(x.de||x.cn) return {de:x.de||'',cn:x.cn||''}; var c=CAT[x.cat]||CAT.other, n=(x.note||'').trim();
   if(x.cat==='hotel'&&n) return {de:'Hotel ('+n+')',cn:'酒店住宿费（'+n+'）'};
   return {de:c.de,cn:c.cnl}; }
-function stdOf(id){ return D.stds.find(function(s){return s.id===id;})||null; }
-function fillStd(keep){ var c=$('f-cat').value; $('f-std').dataset.cat=c; var  L=D.stds.filter(function(s){return s.cat===c;}), sel=$('f-std'); sel.innerHTML='<option value="">不适用标准</option>'+L.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'（'+fmt(s.amt)+' '+s.unit+'）</option>';}).join(''); if(keep!==undefined) sel.value=keep; else if(L.length) sel.value=L[0].id; var st=stdOf(sel.value); $('f-qty-l').firstChild.textContent=st?(st.unit==='每晚'?'晚数':st.unit==='每人'?'人数':st.unit==='每天'?'天数':'张数'):'数量'; $('f-qty').disabled=!st; }
+function stdOf(id){ if(/^hq:/.test(id||'')){ var hs=stdRow(parseInt(id.slice(3),10)); if(!hs) return null; var he=toEur(hs.h,hs.cur,cur); return {id:id,cat:'hotel',name:hs.name+'（集团标准）',amt:he===null?NaN:he,unit:'每晚',hq:1}; } return D.stds.find(function(s){return s.id===id;})||null; }
+function fillStd(keep){ var c=$('f-cat').value; $('f-std').dataset.cat=c; var  L=D.stds.filter(function(s){return s.cat===c;}), sel=$('f-std'); if(hqOn()&&c==='hotel') L=hqHotel().concat(L); if(keep&&/^hq:/.test(keep)&&!L.some(function(s){return s.id===keep;})){ var ks=stdOf(keep); if(ks) L.unshift(ks); } sel.innerHTML='<option value="">不适用标准</option>'+L.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'（'+(s.amt>0?fmt(s.amt):'未设汇率')+' '+s.unit+'）</option>';}).join(''); if(keep!==undefined) sel.value=keep; else if(L.length) sel.value=L[0].id; var st=stdOf(sel.value); $('f-qty-l').firstChild.textContent=st?(st.unit==='每晚'?'晚数':st.unit==='每人'?'人数':st.unit==='每天'?'天数':'张数'):'数量'; $('f-qty').disabled=!st; }
 function remark(x){ var a=[]; if(x.capped) a.push('超标准：票面 '+fmt(origEur(x))+'，标准 '+fmt(x.cap)+'（'+x.stdName+' '+fmt(x.stdAmt)+' × '+x.qty+'）'); if(x.cur&&x.cur!=='EUR') a.push(fmt(x.orig)+' '+x.cur+'，汇率 '+x.fx); if(x.cat!=='hotel'&&x.note) a.push(x.note); return a.join('；'); }
 function origEur(x){ return x.cur&&x.cur!=='EUR'?r2(x.orig/x.fx):r2(x.orig); }
 function issues(){
@@ -301,11 +319,12 @@ function issues(){
   var nf=N.filter(function(r){ return !filesOf(r.it.id).length; }).length; if(nf) L.push(['info','本月有 '+nf+' 张票据还没有挂发票文件']);
   var dup={}; N.forEach(function(r){ var x=r.it,k=x.date+'|'+x.cat+'|'+x.amt; if(dup[k]&&(!x.no||!dup[k].it.no)) L.push(['warn',r.no+' 和 '+dup[k].no+' 的日期、类别、金额完全相同，请确认不是同一张票']); else if(!dup[k]) dup[k]=r; });
   m.ants.forEach(function(a,i){ var s=sumAnt(a.id); if(a.bud>0&&s>a.bud+0.005) L.push(['bad','申请 '+letter(i)+'（'+a.title+'）超预算 '+fmt(s-a.bud)+' 欧元']); if(!m.items.some(function(x){return x.ant===a.id;})) L.push(['info','申请 '+letter(i)+' 下面还没有票据']); });
+  antIssues(L);
   return L;
 }
-function sumAnt(id){ return r2(M().items.filter(function(x){return x.ant===id;}).reduce(function(s,x){return s+x.amt;},0)); }
+function sumAnt(id){ return r2(M().items.filter(function(x){return x.ant===id;}).reduce(function(s,x){return s+x.amt;},0)+allowAnt(antOf(id))); }
 function render(){
-  var m=M(), N=numbered();
+  var m=M(), N=numbered(); renderHQ();
   if(document.activeElement!==$('emp')) $('emp').value=D.emp||'';
   renderPay(); renderYear(); if($('q-text').value.trim().length>=2) doSearch();
   var TR=(m.trash||[]); $('trash-card').hidden=!TR.length||RO; $('trash').innerHTML=TR.map(function(x){ var d=new Date(x.del); return '<tr><td>'+('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'. '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+'</td><td>'+dde(x.date)+'</td><td>'+esc(desc(x).cn)+(filesOf(x.id).length?' <span class="chip">含 '+filesOf(x.id).length+' 个文件</span>':'')+'</td><td class="r">'+fmt(x.amt)+'</td><td style="white-space:nowrap"><button class="btn sm" data-undo="'+x.id+'">恢复</button> <button class="btn sm del" data-purge="'+x.id+'">彻底删除</button></td></tr>'; }).join('');
@@ -313,17 +332,16 @@ function render(){
   $('v-state').textContent=Object.keys(VIEWER).length?'当前有一个有效的查看链接。':'还没有生成过。';
   $('std-n').textContent=D.stds.length?'（已设 '+D.stds.length+' 条）':'（还没有设置）';
   $('s-list').innerHTML=D.stds.length?D.stds.map(function(s){ return '<tr><td>'+(CAT[s.cat]||CAT.other).cn+'</td><td>'+esc(s.name)+'</td><td class="r">'+fmt(s.amt)+'</td><td>'+s.unit+'</td><td><button class="btn sm del" data-sdel="'+s.id+'" aria-label="删除标准 '+esc(s.name)+'">删除</button></td></tr>'; }).join(''):'<tr><td colspan="5" class="note">还没有标准。</td></tr>';
-  var tr=r2(m.items.filter(function(x){return x.ant;}).reduce(function(s,x){return s+x.amt;},0)), da=r2(m.items.filter(function(x){return !x.ant;}).reduce(function(s,x){return s+x.amt;},0));
+  var tr=r2(m.items.filter(function(x){return x.ant;}).reduce(function(s,x){return s+x.amt;},0)), da=r2(m.items.filter(function(x){return !x.ant;}).reduce(function(s,x){return s+x.amt;},0)), alw=allowMon(cur); tr=r2(tr+alw);
   var I=issues(), nb=I.filter(function(x){return x[0]==='bad';}).length, nw=I.filter(function(x){return x[0]==='warn';}).length;
-  $('tiles').innerHTML='<div class="tile"><small>出差和招待</small><strong>'+fmt(tr)+'</strong></div><div class="tile"><small>日常报销</small><strong>'+fmt(da)+'</strong></div><div class="tile"><small>本月合计（欧元）</small><strong>'+fmt(tr+da)+'</strong></div><div class="tile"><small>票据张数</small><strong>'+m.items.length+'</strong></div><div class="tile"><small>待处理问题</small><strong style="color:'+(nb?'var(--bad)':nw?'var(--warn)':'var(--ok)')+'">'+(nb+nw)+'</strong></div>';
-  $('a-list').innerHTML=m.ants.length?m.ants.map(function(a,i){ var s=sumAnt(a.id), over=a.bud>0&&s>a.bud+0.005;
-    return '<tr><td>'+letter(i)+'（Antrag '+(i+1)+'）</td><td>'+esc(a.title)+'</td><td class="r">'+(a.bud>0?fmt(a.bud):'—')+'</td><td class="r">'+fmt(s)+'</td><td>'+(a.bud>0?(over?'<span class="chip bad">超预算 '+fmt(s-a.bud)+'</span>':'<span class="chip ok">预算内，余 '+fmt(a.bud-s)+'</span>'):'<span class="chip">未设预算</span>')+'</td><td style="white-space:nowrap">'+fileCell(a.id)+'</td><td>'+(RO?'':'<button class="btn sm del" data-adel="'+a.id+'" aria-label="删除申请 '+letter(i)+'">删除</button>')+'</td></tr>'; }).join(''):'<tr><td colspan="7" class="note">本月还没有申请。日常报销不需要申请，直接在下面录票据。</td></tr>';
+  $('tiles').innerHTML='<div class="tile"><small>出差和招待'+(alw?'（含伙食补助 '+fmt(alw)+'）':'')+'</small><strong>'+fmt(tr)+'</strong></div><div class="tile"><small>日常报销</small><strong>'+fmt(da)+'</strong></div><div class="tile"><small>本月合计（欧元）</small><strong>'+fmt(tr+da)+'</strong></div><div class="tile"><small>票据张数</small><strong>'+m.items.length+'</strong></div><div class="tile"><small>待处理问题</small><strong style="color:'+(nb?'var(--bad)':nw?'var(--warn)':'var(--ok)')+'">'+(nb+nw)+'</strong></div>';
+  var aeD=(document.activeElement&&document.activeElement.dataset)||{}; if(aeD.dp===undefined) $('a-list').innerHTML=m.ants.length?m.ants.map(antRow).join(''):'<tr><td colspan="7" class="note">本月还没有申请。日常报销不需要申请，直接在下面录票据。</td></tr>';
   var sel=$('f-ant'), keep=sel.value; sel.innerHTML='<option value="">日常报销（无申请）</option>'+m.ants.map(function(a,i){return '<option value="'+a.id+'">'+letter(i)+' · '+esc(a.title)+'</option>';}).join(''); if(keep&&m.ants.some(function(a){return a.id===keep;})) sel.value=keep;
   var h='', last='~';
   N.forEach(function(r){ var x=r.it, g=r.ant?r.ant.id:'';
     if(g!==last){ last=g; h+='<tr class="grp"><td colspan="10">'+(r.ant?'Antrag '+(r.idx+1)+' · '+esc(r.ant.title)+(r.ant.bud>0?'　预算 '+fmt(r.ant.bud):''):'日常报销')+'</td></tr>'; }
     var c=CAT[x.cat]||CAT.other;
-    h+='<tr><td>'+r.no+'</td><td>'+dde(x.date)+'</td><td>'+esc(x.cn||c.cn)+'</td><td>'+esc(x.no||'')+'</td><td class="r">'+fmt(x.orig)+(x.cur!=='EUR'?' '+x.cur:'')+'</td><td class="r">'+fmt(x.amt)+'</td><td>'+x.vat+'%</td><td>'+(x.ven?'<b>'+esc(x.ven)+'</b> ':'')+esc(x.note||'')+'</td><td style="white-space:nowrap">'+fileCell(x.id)+'</td><td style="white-space:nowrap">'+(RO?(x.capped?'<span class="chip warn">按标准报销</span>':''):'<button class="btn sm" data-edit="'+x.id+'" aria-label="修改 '+r.no+'">改</button> <button class="btn sm del" data-del="'+x.id+'" aria-label="删除 '+r.no+'">删</button>')+'</td></tr>'; });
+    h+='<tr><td>'+r.no+'</td><td>'+dde(x.date)+'</td><td>'+esc(x.cn||c.cn)+(hqOn()?'<br><span class="note">'+fyOf(x,r.ant)+(x.att?'':' · 附件未确认')+'</span>':'')+'</td><td>'+esc(x.no||'')+'</td><td class="r">'+fmt(x.orig)+(x.cur!=='EUR'?' '+x.cur:'')+'</td><td class="r">'+fmt(x.amt)+'</td><td>'+x.vat+'%</td><td>'+(x.ven?'<b>'+esc(x.ven)+'</b> ':'')+esc(x.note||'')+'</td><td style="white-space:nowrap">'+fileCell(x.id)+'</td><td style="white-space:nowrap">'+(RO?(x.capped?'<span class="chip warn">按标准报销</span>':''):'<button class="btn sm" data-edit="'+x.id+'" aria-label="修改 '+r.no+'">改</button> <button class="btn sm del" data-del="'+x.id+'" aria-label="删除 '+r.no+'">删</button>')+'</td></tr>'; });
   $('list').innerHTML=h||'<tr><td colspan="10" class="note">本月还没有票据。</td></tr>';
   $('iss').innerHTML=I.length?I.map(function(x){return '<li><span class="chip '+(x[0]==='bad'?'bad':x[0]==='warn'?'warn':'')+'">'+(x[0]==='bad'?'必须处理':x[0]==='warn'?'请确认':'提示')+'</span> '+esc(x[1])+'</li>';}).join(''):'<li><span class="chip ok">通过</span> 没有发现问题。</li>';
 }
@@ -379,7 +397,7 @@ function rangeOf(){ var a=$('q-from').value, b=$('q-to').value; if(a&&b&&a>b){ v
 function rangeTag(){ var r=rangeOf(); return (r[0]||'开始')+'_至_'+(r[1]||'最新'); }
 function renderYear(){
   var r=rangeOf(), ks=monthsIn(r[0],r[1]), o=$('q-year'); if(!ks.length){ o.innerHTML='<p class="note">所选时间段内没有票据。</p>'; return; }
-  var cats={}, tot={}, grand=0; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; tot[k]=(tot[k]||0)+x.amt; grand+=x.amt; }); });
+  var cats={}, tot={}, grand=0; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; tot[k]=(tot[k]||0)+x.amt; grand+=x.amt; }); var al=allowMon(k); if(al){ cats['伙食补助']=cats['伙食补助']||{}; cats['伙食补助'][k]=al; tot[k]=(tot[k]||0)+al; grand+=al; } });
   var names=Object.keys(cats).sort(function(a,b){ var sa=0,sb=0; ks.forEach(function(k){ sa+=cats[a][k]||0; sb+=cats[b][k]||0; }); return sb-sa; });
   var h='<table><thead><tr><th>类别</th>'+ks.map(function(k){return '<th class="r">'+k.slice(2)+'</th>';}).join('')+'<th class="r">合计</th></tr></thead><tbody>';
   names.forEach(function(n){ var s=0; h+='<tr><td>'+esc(n)+'</td>'+ks.map(function(k){ var v=cats[n][k]||0; s+=v; return '<td class="r">'+(v?fmt(v):'')+'</td>'; }).join('')+'<td class="r"><b>'+fmt(s)+'</b></td></tr>'; });
@@ -402,12 +420,12 @@ function xAll(){
   var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('报销明细');
   ws.columns=[{width:9},{width:7},{width:34},{width:11},{width:14},{width:38},{width:34},{width:24},{width:13},{width:13},{width:7},{width:34},{width:40},{width:24}];
   styleHead(ws.addRow(['月份','序号','申请','票据日期','类别','德语描述','中文描述','发票号','票面金额(€)','报销金额(€)','税率%','备注','发票文件','供应商']));
-  var tot=0; ks.forEach(function(k){ numberedOf(k).forEach(function(q){ var x=q.it,d=desc(x); var row=ws.addRow([k,q.no,q.ant?('Antrag '+(q.idx+1)+' '+q.ant.title):'日常报销',new Date(x.date+'T00:00:00Z'),(CAT[x.cat]||CAT.other).cn,d.de,d.cn,x.no||'',origEur(x),x.amt,x.vat,remark(x),filesOf(x.id).map(function(f){return f.name;}).join('；'),venOf(x)]); row.font={name:'Arial',size:10}; row.getCell(4).numFmt='dd.mm.yyyy'; row.getCell(9).numFmt='#,##0.00'; row.getCell(10).numFmt='#,##0.00'; tot+=x.amt; }); });
+  var tot=0; ks.forEach(function(k){ numberedOf(k).forEach(function(q){ var x=q.it,d=desc(x); var row=ws.addRow([k,q.no,q.ant?('Antrag '+(q.idx+1)+' '+q.ant.title):'日常报销',new Date(x.date+'T00:00:00Z'),(CAT[x.cat]||CAT.other).cn,d.de,d.cn,x.no||'',origEur(x),x.amt,x.vat,remark(x),filesOf(x.id).map(function(f){return f.name;}).join('；'),venOf(x)]); row.font={name:'Arial',size:10}; row.getCell(4).numFmt='dd.mm.yyyy'; row.getCell(9).numFmt='#,##0.00'; row.getCell(10).numFmt='#,##0.00'; tot+=x.amt; }); D.months[k].ants.forEach(function(a,ai){ var al=allowAnt(a,k); if(!al) return; var row=ws.addRow([k,letter(ai)+'补','Antrag '+(ai+1)+' '+a.title,new Date(a.to+'T00:00:00Z'),'伙食补助','Verpflegungspauschale laut Konzernrichtlinie','伙食补助（集团出国标准包干）','',al,al,0,'见行程明细表','','']); row.font={name:'Arial',size:10}; row.getCell(4).numFmt='dd.mm.yyyy'; row.getCell(9).numFmt='#,##0.00'; row.getCell(10).numFmt='#,##0.00'; tot+=al; }); });
   var sr=ws.addRow(['合计',null,null,null,null,null,null,null,null,r2(tot)]); sr.font={name:'Arial',bold:true,size:10}; sr.getCell(10).numFmt='#,##0.00'; ws.views=[{state:'frozen',ySplit:1}]; ws.autoFilter={from:'A1',to:'N1'};
-  var s2=wb.addWorksheet('按类别和月份'); var cats={}; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; }); });
+  var s2=wb.addWorksheet('按类别和月份'); var cats={}; ks.forEach(function(k){ D.months[k].items.forEach(function(x){ var c=(CAT[x.cat]||CAT.other).cn; cats[c]=cats[c]||{}; cats[c][k]=(cats[c][k]||0)+x.amt; }); var al2=allowMon(k); if(al2){ cats['伙食补助']=cats['伙食补助']||{}; cats['伙食补助'][k]=al2; } });
   s2.columns=[{width:18}].concat(ks.map(function(){return {width:12};})).concat([{width:14}]); styleHead(s2.addRow(['类别'].concat(ks).concat(['合计'])));
   Object.keys(cats).forEach(function(c){ var s=0, row=s2.addRow([c].concat(ks.map(function(k){ var v=r2(cats[c][k]||0); s+=v; return v||null; })).concat([r2(s)])); row.font={name:'Arial',size:10}; row.eachCell(function(cell,i){ if(i>1) cell.numFmt='#,##0.00'; }); });
-  var tr=s2.addRow(['合计'].concat(ks.map(function(k){ return r2(D.months[k].items.reduce(function(s,x){return s+x.amt;},0)); })).concat([r2(tot)])); tr.font={name:'Arial',bold:true,size:10}; tr.eachCell(function(cell,i){ if(i>1) cell.numFmt='#,##0.00'; });
+  var tr=s2.addRow(['合计'].concat(ks.map(function(k){ return monTotal(k); })).concat([r2(tot)])); tr.font={name:'Arial',bold:true,size:10}; tr.eachCell(function(cell,i){ if(i>1) cell.numFmt='#,##0.00'; });
   var s3=wb.addWorksheet('银行付款'); s3.columns=[{width:12},{width:14},{width:14},{width:60}]; styleHead(s3.addRow(['付款日期','对应报销月份','金额(€)','备注']));
   (D.pays||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;}).filter(function(p){ return !p.mon||ks.indexOf(p.mon)>-1; }).forEach(function(p){ var row=s3.addRow([new Date(p.date+'T00:00:00Z'),p.mon||'',p.amt,p.note||'']); row.font={name:'Arial',size:10}; row.getCell(1).numFmt='dd.mm.yyyy'; row.getCell(3).numFmt='#,##0.00'; });
   dl(wb,'报销明细_'+rangeTag()+'.xlsx');
@@ -426,7 +444,7 @@ function xZip(){
   next();
 }
 
-function monTotal(k){ var m=D.months[k]; return m?r2(m.items.reduce(function(s,x){return s+x.amt;},0)):0; }
+function monTotal(k){ var m=D.months[k]; return m?r2(m.items.reduce(function(s,x){return s+x.amt;},0)+allowMon(k)):0; }
 function renderPay(){
   var P=(D.pays||[]).slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
   $('p-list').innerHTML=P.length?P.map(function(x){ return '<tr><td>'+dde(x.date)+'</td><td>'+esc(x.mon||'—')+'</td><td class="r">'+fmt(x.amt)+'</td><td>'+esc(x.note||'')+'</td><td>'+(RO?'':'<button class="btn sm del" data-pdel="'+x.id+'" aria-label="删除付款 '+dde(x.date)+'">删除</button>')+'</td></tr>'; }).join(''):'<tr><td colspan="5" class="note">还没有付款记录。</td></tr>';
@@ -439,12 +457,13 @@ function renderPay(){
 function hint(){
   var o=num($('f-orig').value), c=$('f-cur').value, fx=num($('f-fx').value), t='';
   if(c!=='EUR'&&o>0&&fx>0) t='折合 '+fmt(o/fx)+' 欧元。';
-  var st=stdOf($('f-std').value); if(st){ var q=num($('f-qty').value); if(!(q>0)) q=1; var cap=r2(st.amt*q), eur=c==='EUR'?o:(fx>0?o/fx:NaN); t+=' 标准上限 '+fmt(st.amt)+' × '+q+' = '+fmt(cap)+' 欧元。'; if(eur>cap+0.005) t+='票面超标 '+fmt(eur-cap)+'，将按 '+fmt(cap)+' 报销。'; }
+  var st=stdOf($('f-std').value); if(st&&!(st.amt>0)){ t+=' 这条住宿标准是外币，请先在“报销标准设置”里填本月汇率。'; } else if(st){ var q=num($('f-qty').value); if(!(q>0)) q=1; var cap=r2(st.amt*q), eur=c==='EUR'?o:(fx>0?o/fx:NaN); t+=' 标准上限 '+fmt(st.amt)+' × '+q+' = '+fmt(cap)+' 欧元。'; if(eur>cap+0.005) t+='票面超标 '+fmt(eur-cap)+'，将按 '+fmt(cap)+' 报销。'; }
   if($('f-cat').value==='meal') t+=' 招待费：记账时 70% 进 4650，30% 进 4654。食品和酒水税率不同时，请分两张录。';
   if($('f-cat').value==='hotel') t+=' 酒店请在补充说明里写“酒店名, 晚数”，例如 Adina Hotel Munich, 1N。';
+  if(hqOn()){ var fy=fyOf({cat:$('f-cat').value},antOf($('f-ant').value)); t+=' 集团费用项目：'+fy+' '+fyName(fy)+'。'; $('f-att-t').textContent='附件已齐（'+(FYA[fy]||'发票')+'）'; }
   $('f-hint').textContent=t;
 }
-function clearForm(){ ['f-orig','f-fx','f-amt','f-no','f-note','f-qty','f-ven'].forEach(function(i){$(i).value='';}); $('f-file').value=''; fillStd(); $('f-cur').value='EUR'; edit=null; $('f-cancel').hidden=true; $('f-add').textContent='保存这张票据'; $('f-h').textContent='二、录入一张票据'; hint(); }
+function clearForm(){ ['f-orig','f-fx','f-amt','f-no','f-note','f-qty','f-ven'].forEach(function(i){$(i).value='';}); $('f-file').value=''; $('f-att').checked=false; fillStd(); $('f-cur').value='EUR'; edit=null; $('f-cancel').hidden=true; $('f-add').textContent='保存这张票据'; $('f-h').textContent='二、录入一张票据'; hint(); }
 function saveItem(force){
   var raw=$('f-orig').value.trim(); if(force!==true&&/^\d{1,3}\.\d{3}$/.test(raw)){ var big=parseFloat(raw.replace('.','')); ask('票面金额是多少？','您输入的是 '+raw+'。\n它可以理解成 '+fmt(big)+'，也可以理解成 '+fmt(parseFloat(raw))+'。\n点“按 '+fmt(big)+' 保存”，或点取消后重新输入（小数请用逗号，例如 1155,06）。','按 '+fmt(big)+' 保存').then(function(y){ if(y){ $('f-orig').value=String(big); saveItem(true); } }); return; }
   var date=$('f-date').value, cat=$('f-cat').value, o=num($('f-orig').value), c=$('f-cur').value, fx=num($('f-fx').value), a=num($('f-amt').value);
@@ -453,8 +472,9 @@ function saveItem(force){
   if(c!=='EUR'&&!(fx>0)){ toast('外币票据请填汇率'); return; }
   var eur=c==='EUR'?r2(o):r2(o/fx); if(!(a>0)) a=eur;
   var st=stdOf($('f-std').value), q=num($('f-qty').value), cap=0, capped=false; if(!(q>0)) q=1;
+  if(st&&!(st.amt>0)){ toast('这条住宿标准是外币，请先填本月汇率'); return; }
   if(st){ cap=r2(st.amt*q); if(a>cap+0.005){ a=cap; capped=true; } }
-  var it={std:st?st.id:'',stdName:st?st.name:'',stdAmt:st?st.amt:0,qty:st?q:0,cap:cap,capped:capped,ven:$('f-ven').value.trim().slice(0,60),id:edit||uid(),ant:$('f-ant').value||'',date:date,cat:cat,vat:parseInt($('f-vat').value,10)||0,orig:r2(o),cur:c,fx:c==='EUR'?1:fx,amt:r2(a),no:$('f-no').value.trim(),note:$('f-note').value.trim()};
+  var it={std:st?st.id:'',stdName:st?st.name:'',stdAmt:st?st.amt:0,qty:st?q:0,cap:cap,capped:capped,ven:$('f-ven').value.trim().slice(0,60),id:edit||uid(),ant:$('f-ant').value||'',date:date,cat:cat,vat:parseInt($('f-vat').value,10)||0,orig:r2(o),cur:c,fx:c==='EUR'?1:fx,amt:r2(a),no:$('f-no').value.trim(),note:$('f-note').value.trim()}; if(hqOn()) it.att=$('f-att').checked?1:0;
   var m=M(), i=m.items.findIndex(function(x){return x.id===it.id;});
   if(i>-1){ var old=m.items[i]; it.t=old.t; ['ono','hist'].forEach(function(k){ if(old[k]!==undefined) it[k]=old[k]; }); if(old.de&&old.cat===it.cat&&!it.note){ it.de=old.de; it.cn=old.cn; } m.items[i]=it; } else m.items.push(it);
   var FL=Array.prototype.slice.call($('f-file').files||[]), fid=it.id;
@@ -468,16 +488,17 @@ function dl(wb,name){ return (function(w){ try{ w.creator='鲁商德国'; w.last
 function need(){ if(typeof ExcelJS==='undefined'){ toast('表格组件没有加载成功，请检查网络后刷新'); return false; } if(!M().items.length){ toast('本月还没有票据'); return false; } return true; }
 function xTravel(){
   if(!need()) return; var m=M(), N=numbered().filter(function(r){return r.ant;});
-  if(!N.length){ toast('本月没有挂在申请下的票据'); return; }
+  if(!N.length&&!allowMon(cur)){ toast('本月没有挂在申请下的票据'); return; }
   var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('出差报销 '+monLabel());
   ws.columns=[{width:9},{width:12},{width:14},{width:44},{width:40},{width:26},{width:16},{width:30}];
   ws.addRow(['Geschäftsreisen / 出差报销 — '+monLabel()]).font={name:'Arial',bold:true,size:13};
   ws.addRow(['Mitarbeiterin:',D.emp||'']).font={name:'Arial',size:10};
   var H=['Nr.\n序号','Datum\n日期','Betrag (€)\n报销金额','Beschreibung (DE)\n德语描述','Beschreibung (CN)\n中文描述','Belegnr.\n发票号','Originalbetrag (€)\n原始金额','Anmerkung\n备注'], tot=0;
-  m.ants.forEach(function(a,i){ var rows=N.filter(function(r){return r.ant.id===a.id;}); if(!rows.length) return;
+  m.ants.forEach(function(a,i){ var rows=N.filter(function(r){return r.ant.id===a.id;}); if(!rows.length&&!allowAnt(a)) return;
     styleHead(ws.addRow(H));
     var t=ws.addRow(['Antrag '+(i+1)+' - '+a.title+(a.bud>0?'  Budget: '+a.bud+'€':'')]); t.font={name:'Arial',bold:true,size:10}; ws.mergeCells(t.number,1,t.number,8);
     var s=0; rows.forEach(function(r){ var x=r.it,d=desc(x); var rr=ws.addRow([r.no,dde(x.date),x.amt,d.de,d.cn,x.no||'',origEur(x),remark(x)]); rr.font={name:'Arial',size:10}; rr.getCell(3).numFmt='#,##0.00'; rr.getCell(7).numFmt='#,##0.00'; s+=x.amt; });
+    var al=allowAnt(a); if(al){ var ar=ws.addRow([letter(i)+'补',dde(a.to),al,'Verpflegungspauschale laut Konzernrichtlinie','伙食补助（集团出国标准包干）','',al,'见行程明细表']); ar.font={name:'Arial',size:10}; ar.getCell(3).numFmt='#,##0.00'; ar.getCell(7).numFmt='#,##0.00'; s+=al; }
     var sr=ws.addRow(['Summe / 合计',null,r2(s)]); sr.font={name:'Arial',bold:true,size:10}; sr.getCell(3).numFmt='#,##0.00'; tot+=s; ws.addRow([]); });
   var g=ws.addRow(['Summe / 合计',null,r2(tot)]); g.font={name:'Arial',bold:true,size:11}; g.getCell(3).numFmt='#,##0.00';
   dl(wb,'Reisekosten_'+monLabel().replace(' ','_')+'.xlsx');
@@ -503,6 +524,7 @@ function bookRows(){
     if(tax>0) out.push(base.slice(0,3).concat([d.cn+' 进项税 '+x.vat+'%',base[4],base[5],x.vat===7?1571:1576,1592,tax,'',memo]));
     if(x.cat==='meal'){ var nd=r2(net*0.3); out.push(base.slice(0,3).concat(['招待费 30% 不可抵扣',base[4],base[5],4654,4650,nd,'',memo])); }
   });
+  M().ants.forEach(function(a,i){ var al=allowAnt(a); if(al) out.push([new Date(a.to+'T00:00:00Z'),cur,'费用及其他','出差伙食补助 '+a.title,'报销 '+(D.emp||''),tag+' '+letter(i)+'补',4664,1592,al,'','Antrag '+(i+1)+' '+a.title]); });
   (D.pays||[]).filter(function(x){return x.date.slice(0,7)===cur;}).forEach(function(x){ out.push([new Date(x.date+'T00:00:00Z'),cur,'费用及其他','支付报销款'+(x.mon?' '+x.mon:''),'报销 '+(D.emp||''),'付款 '+dde(x.date),1592,1200,x.amt,'',x.note||'']); });
   return out;
 }
@@ -514,6 +536,154 @@ function xBook(){
   ws.addRow([]); var n=ws.addRow(['说明：选中上面的数据行（不含表头），复制后粘贴到“内部记账表”的“记账”页 A 到 K 列。贷方 1592 合计 '+fmt(s)+'，应等于本月报销总额；借方 1592 的行是本月付给报销人的银行付款。']); n.font={name:'Arial',size:9,color:{argb:'FF667085'}};
   dl(wb,'报销记账行_'+cur+'.xlsx');
 }
+/* ---------- 集团标准（2026-11 起生效，之前的月份不受影响） ---------- */
+var HQ_FROM='2026-11', DE_DEF=169, STD=[[1,"蒙古","","USD",90,50,35],[2,"朝鲜","","USD",120,40,30],[3,"韩国","首尔、釜山、济州","USD",180,70,35],[4,"韩国","光州、西归浦","USD",160,70,35],[5,"韩国","其他城市","USD",150,70,35],[6,"日本","东京","JPY",20000,10000,5000],[7,"日本","大阪、京都","JPY",18000,10000,5000],[8,"日本","福冈、札幌、长崎、名古屋","JPY",14000,10000,5000],[9,"日本","新潟","JPY",11000,10000,5000],[10,"日本","其他城市","JPY",9000,10000,5000],[11,"缅甸","","USD",90,50,35],[12,"巴基斯坦","伊斯兰堡","USD",270,30,30],[13,"巴基斯坦","其他城市","USD",170,30,30],[14,"斯里兰卡","","USD",140,40,30],[15,"马尔代夫","","USD",200,50,30],[16,"孟加拉","","USD",150,50,40],[17,"伊拉克","巴格达","USD",320,50,40],[18,"伊拉克","其他城市","USD",290,50,40],[19,"阿拉伯联合酋长国","","USD",200,50,40],[20,"也门","萨那","USD",110,50,35],[21,"也门","亚丁","USD",90,50,35],[22,"也门","其他城市","USD",80,50,35],[23,"阿曼","","USD",200,50,40],[24,"伊朗","","USD",180,50,40],[25,"科威特","","USD",200,70,40],[26,"沙特阿拉伯","利雅得","USD",200,70,40],[27,"沙特阿拉伯","吉达","USD",140,70,40],[28,"沙特阿拉伯","其他城市","USD",120,70,40],[29,"巴林","","USD",190,55,40],[30,"以色列","","USD",380,70,40],[31,"巴勒斯坦","","USD",180,70,40],[32,"文莱","","USD",130,40,35],[33,"印度","新德里、加尔各答","USD",175,50,35],[34,"印度","孟买","USD",200,50,35],[35,"印度","其他城市","USD",155,50,35],[36,"不丹","","USD",160,50,35],[37,"越南","河内","USD",90,40,30],[38,"越南","胡志明","USD",80,40,30],[39,"越南","其他城市","USD",70,40,30],[40,"柬埔寨","","USD",100,40,30],[41,"老挝","","USD",130,40,30],[42,"马来西亚","","USD",110,50,35],[43,"马来西亚","宿务","USD",180,50,35],[44,"马来西亚","其他城市","USD",130,50,35],[45,"印度尼西亚","","USD",125,50,35],[46,"东帝汶","","USD",130,40,35],[47,"泰国","曼谷","USD",140,50,35],[48,"泰国","宋卡","USD",110,50,35],[49,"泰国","清迈、孔敬","USD",90,50,35],[50,"泰国","其他城市","USD",80,50,35],[51,"新加坡","","USD",220,55,40],[52,"阿富汗","","USD",200,38,30],[53,"尼泊尔","","USD",140,50,35],[54,"黎巴嫩","","USD",400,50,35],[55,"塞浦路斯","","USD",100,40,35],[56,"约旦","","USD",160,50,35],[57,"土耳其","安卡拉","USD",105,45,30],[58,"土耳其","伊斯坦布尔","USD",150,45,30],[59,"土耳其","其他城市","USD",90,45,30],[60,"叙利亚","","USD",350,50,35],[61,"卡塔尔","","USD",160,60,40],[62,"香港","","HKD",1900,500,300],[63,"澳门","","HKD",1200,500,300],[64,"台湾","","USD",150,60,40],[65,"马达加斯加","塔那那利佛","USD",130,38,30],[66,"马达加斯加","塔马塔夫","USD",100,38,30],[67,"马达加斯加","其他城市","USD",90,38,30],[68,"喀麦隆","","USD",120,50,35],[69,"多哥","","USD",110,48,35],[70,"科特迪瓦","","USD",120,50,35],[71,"摩洛哥","","USD",130,50,40],[72,"阿尔及利亚","","USD",180,55,35],[73,"卢旺达","","USD",130,32,30],[74,"几内亚","","USD",130,55,35],[75,"埃塞俄比亚","","USD",210,50,35],[76,"厄立特里亚","","USD",110,50,35],[77,"莫桑比克","","USD",170,50,35],[78,"塞舌尔","","USD",240,50,35],[79,"肯尼亚","","USD",195,50,35],[80,"利比亚","","USD",160,50,35],[81,"安哥拉","","USD",400,60,40],[82,"赞比亚","","USD",150,45,35],[83,"几内亚比绍","","USD",170,45,35],[84,"突尼斯","","USD",100,40,35],[85,"布隆迪","","USD",220,40,35],[86,"莱索托","","USD",100,35,30],[87,"津巴布韦","","USD",120,45,33],[88,"尼日利亚","阿布贾","USD",270,60,35],[89,"尼日利亚","拉各斯","USD",300,60,35],[90,"尼日利亚","其他城市","USD",250,60,35],[91,"毛里求斯","","USD",155,50,35],[92,"索马里","","USD",200,50,35],[93,"苏丹","","USD",130,40,32],[94,"贝宁","","USD",150,35,30],[95,"马里","","USD",280,50,35],[96,"乌干达","","USD",170,50,35],[97,"塞拉利昂","","USD",155,50,35],[98,"吉布提","","USD",160,60,35],[99,"塞内加尔","","USD",165,50,35],[100,"冈比亚","","USD",170,50,35],[101,"加蓬","","USD",180,60,35],[102,"中非","","USD",280,50,35],[103,"布基纳法索","","USD",140,50,35],[104,"毛里塔尼亚","","USD",130,55,35],[105,"尼日尔","","USD",145,50,35],[106,"乍得","","USD",220,50,35],[107,"赤道几内亚","","USD",200,50,35],[108,"加纳","","USD",250,50,35],[109,"坦桑尼亚","达累斯萨拉姆","USD",180,50,35],[110,"坦桑尼亚","桑给巴尔","USD",210,50,35],[111,"坦桑尼亚","其他城市","USD",160,50,35],[112,"刚果（金）","","USD",220,50,35],[113,"刚果（布）","","USD",170,50,35],[114,"埃及","","USD",170,50,35],[115,"圣多美和普林西比","","USD",170,50,35],[116,"博茨瓦纳","","USD",170,50,35],[117,"南非","比勒陀尼亚、约翰内斯堡","USD",170,50,35],[118,"南非","开普敦","USD",210,50,35],[119,"南非","德班","USD",150,50,35],[120,"南非","其他城市","USD",130,50,35],[121,"纳米比亚","","USD",140,35,30],[122,"斯威士兰","","USD",150,50,35],[123,"利比里亚","","USD",220,50,35],[124,"佛得角","","USD",120,50,35],[125,"科摩罗","","USD",120,40,35],[126,"南苏丹","","USD",200,40,32],[127,"马拉维","","USD",130,50,35],[128,"罗马尼亚","布加勒斯特","USD",120,45,40],[129,"罗马尼亚","康斯坦察","USD",120,50,40],[130,"罗马尼亚","其他城市","USD",80,50,40],[131,"马其顿","","USD",120,50,35],[132,"斯洛文尼亚","","EUR",140,30,25],[133,"波黑","","USD",100,40,35],[134,"克罗地亚","","USD",180,40,35],[135,"阿尔巴尼亚","","USD",150,35,30],[136,"保加利亚","","USD",110,45,40],[137,"保加利亚","莫斯科","USD",285,45,40],[138,"保加利亚","哈巴罗斯克","USD",200,45,40],[139,"保加利亚","叶卡捷琳堡、圣彼得堡","USD",170,45,40],[140,"保加利亚","伊尔库茨克","USD",150,45,40],[141,"保加利亚","其他城市","USD",140,45,40],[142,"立陶宛","","USD",120,45,35],[143,"拉脱维亚","","EUR",120,35,25],[144,"爱沙尼亚","","EUR",120,35,25],[145,"乌克兰","基辅","USD",130,45,40],[146,"乌克兰","敖德萨","USD",130,45,40],[147,"乌克兰","其他城市","USD",80,45,40],[148,"阿塞拜疆","","USD",150,45,40],[149,"亚美尼亚","","USD",120,45,40],[150,"格鲁吉亚","","USD",150,45,40],[151,"吉尔吉斯斯坦","比什凯克","USD",230,45,40],[152,"吉尔吉斯斯坦","其他城市","USD",80,45,40],[153,"塔吉克斯坦","","USD",210,45,40],[154,"土库曼斯坦","","USD",120,45,40],[155,"乌兹别克斯坦","塔什干","USD",120,40,32],[156,"乌兹别克斯坦","撇马尔罕","USD",100,40,32],[157,"乌兹别克斯坦","其他城市","USD",90,40,32],[158,"白俄罗斯","","USD",180,45,40],[159,"哈萨克斯坦","阿斯塔纳","USD",200,45,40],[160,"哈萨克斯坦","阿拉木图","USD",200,45,40],[161,"哈萨克斯坦","其他城市","USD",140,45,40],[162,"摩尔多瓦","","USD",90,45,40],[163,"波兰","华沙","USD",190,50,40],[164,"波兰","革但斯克","USD",130,50,40],[165,"波兰","其他城市","USD",120,50,40],[166,"德国","柏林、汉堡","EUR",150,60,38],[167,"德国","慕尼黑","EUR",170,60,38],[168,"德国","法兰克福","EUR",180,60,38],[169,"德国","其他城市","EUR",120,60,38],[170,"荷兰","海牙","EUR",150,60,38],[171,"荷兰","阿姆斯特丹","EUR",170,60,38],[172,"荷兰","其他城市","EUR",130,60,38],[173,"意大利","罗马","EUR",160,65,38],[174,"意大利","米兰","EUR",140,65,38],[175,"意大利","佛罗伦萨","EUR",120,65,38],[176,"意大利","其他城市","EUR",110,65,38],[177,"比利时","","EUR",160,60,38],[178,"奥地利","","EUR",140,60,38],[179,"希腊","","EUR",150,55,35],[180,"法国","巴黎","EUR",180,60,40],[181,"法国","马赛、斯特拉斯堡、尼斯、里昂","EUR",160,60,40],[182,"法国","其他城市","EUR",150,60,40],[183,"西班牙","","EUR",125,60,38],[184,"卢森堡","","EUR",160,55,38],[185,"爱尔兰","","EUR",160,60,38],[186,"葡萄牙","","EUR",130,60,38],[187,"芬兰","","EUR",145,60,40],[188,"捷克","","EUR",160,45,50],[189,"斯洛伐克","","EUR",120,35,30],[190,"匈牙利","","USD",180,45,45],[191,"瑞典","","USD",280,80,50],[192,"丹麦","","USD",200,80,50],[193,"挪威","","USD",200,80,50],[194,"瑞士","","USD",230,70,50],[195,"冰岛","","USD",260,65,50],[196,"马耳他","","EUR",160,38,25],[197,"塞尔维亚","","USD",120,40,30],[198,"黑山","","EUR",90,30,22],[199,"英国","伦敦","GBP",200,45,35],[200,"英国","曼彻斯特、爱丁堡","GBP",140,45,35],[201,"英国","其他城市","GBP",125,45,35],[202,"美国","华盛顿、芝加哥","USD",260,55,45],[203,"美国","纽约","USD",270,55,45],[204,"美国","洛杉矶","USD",250,55,45],[205,"美国","其他城市","USD",200,55,45],[206,"加拿大","渥太华、多伦多、卡尔加里、蒙特利尔","USD",210,55,45],[207,"加拿大","温哥华","USD",240,55,45],[208,"加拿大","其他城市","USD",190,55,45],[209,"墨西哥","墨西哥","USD",150,50,45],[210,"墨西哥","坎昆","USD",160,50,45],[211,"墨西哥","蒂华纳","USD",120,50,45],[212,"墨西哥","其他城市","USD",100,50,45],[213,"巴西","巴西利亚","USD",160,50,45],[214,"巴西","圣保罗","USD",240,50,45],[215,"巴西","里约热内卢","USD",260,50,45],[216,"巴西","其他城市","USD",150,50,45],[217,"牙买加","","USD",160,50,45],[218,"特立达和多巴哥","","USD",180,50,45],[219,"厄瓜多尔","","USD",150,40,32],[220,"阿根廷","","USD",190,50,45],[221,"乌拉圭","","USD",135,50,45],[222,"智利","圣地亚哥","USD",135,47,45],[223,"智利","伊基克","USD",120,47,45],[224,"智利","安托法加斯塔、阿里卡","USD",140,47,45],[225,"智利","其他城市","USD",100,47,45],[226,"哥伦比亚","波哥大","USD",190,40,35],[227,"哥伦比亚","麦德林","USD",110,40,35],[228,"哥伦比亚","卡塔赫纳","USD",120,40,35],[229,"哥伦比亚","其他城市","USD",100,40,35],[230,"巴巴多斯","","USD",250,60,45],[231,"圭亚那","","USD",160,50,45],[232,"古巴","","USD",200,40,37],[233,"巴拿马","","USD",135,45,45],[234,"格林纳达","","USD",280,45,45],[235,"安提瓜和巴布达","","USD",220,60,45],[236,"秘鲁","","USD",140,40,40],[237,"玻利维亚","","USD",110,36,30],[238,"尼加拉瓜","","USD",120,45,45],[239,"苏里南","","USD",140,50,45],[240,"委内瑞拉","","USD",230,45,45],[241,"海地","","USD",180,45,43],[242,"波多黎各","","USD",150,45,45],[243,"多米尼加","","USD",150,45,45],[244,"多米尼克","","USD",200,45,45],[245,"巴哈马","","USD",220,45,45],[246,"圣卢西亚","","USD",200,45,45],[247,"阿鲁巴岛","","USD",200,45,45],[248,"哥斯达黎加","","USD",120,45,40],[249,"澳大利亚","帕斯、布里斯班","USD",180,60,50],[250,"澳大利亚","墨尔本、悉尼","USD",200,60,50],[251,"澳大利亚","堪培拉","USD",210,60,50],[252,"澳大利亚","其他城市","USD",160,60,50],[253,"新西兰","","USD",180,60,45],[254,"萨摩亚","","USD",170,47,45],[255,"斐济","苏瓦","USD",190,45,50],[256,"斐济","楠迪","USD",120,45,50],[257,"斐济","其他城市","USD",110,45,50],[258,"巴布亚新几内亚","","USD",350,55,50],[259,"密克罗尼西亚","","USD",120,40,30],[260,"马绍尔群岛","","USD",120,55,35],[261,"瓦努阿图","","USD",220,55,35],[262,"基里巴斯","","USD",195,55,35],[263,"汤加","","USD",160,60,35],[264,"帕劳","","USD",180,60,35],[265,"库克群岛","","USD",180,60,35],[266,"所罗门群岛","","USD",200,60,35],[267,"法属留尼汪岛","","USD",140,60,35],[268,"法属波利尼西亚","","USD",240,60,35]], FYALL={"XC001001":"员工工资","XC001002":"奖金及津贴","XC001003":"其他短期薪酬","XC002001":"独生子女费","XC002002":"降温费","XC003001":"内部退休人员支出","XC003002":"单位统筹外离退休人员福利","XC003003":"内部退休人员支出（已计提）","XC004001":"短期带薪缺勤","XC004002":"长期带薪缺勤","XC005001":"其他应收款-集团内","XC005002":"其他应付款-集团内","XC005003":"其他应收款-集团外","XC005004":"其他应付款-集团外","XC006001":"单位养老保险","XC006002":"单位失业保险","XC006003":"单位医疗保险费","XC006004":"单位工伤保险费","XC006005":"单位补充医疗保险费","XC006006":"单位住房公积金","XC006007":"单位企业年金","XC006008":"代缴社保公积金","XC006009":"缴纳内退人员社保公积金","XC006011":"缴纳已计提内退人员支出","XC006010":"代扣社保公积金","XC007001":"个人承担养老保险","XC007002":"个人承担医疗保险","XC007003":"个人承担失业保险","XC007004":"个人承担住房公积金","XC007005":"个人承担企业年金","XC007006":"代扣餐费","XC007007":"个人所得税","XC007008":"个人风险金","XC008001":"员工工资（开办费）","XC008002":"单位养老保险（开办费）","XC008003":"单位失业保险（开办费）","XC008004":"单位医疗保险费（开办费）","XC008005":"单位工伤保险费（开办费）","FY001001":"托儿费","FY001002":"职工保健费","FY001003":"帮困基金","FY001004":"过节费","FY001005":"员工餐厅支出","FY001006":"员工宿舍支出","FY001007":"工装费","FY001010":"单位统筹外离退休人员福利","FY001011":"其他长期职工福利费","FY001012":"其他短期员工福利费","FY001013":"加班餐费","FY001014":"班车租赁费","FY002001":"工会经费","FY002002":"职工教育经费（已计提）","FY002007":"职工教育经费","FY002003":"党建工作经费","FY002006":"党建工作经费（已计提）","FY002004":"党费","FY002005":"团费","FY003001":"培训费","FY003002":"团队建设费","FY003003":"招聘费","FY004001":"劳务费","FY004002":"促销员费用","FY004003":"佣金费用","FY005001":"劳动保护费","FY005002":"短期利润分享计划","FY005003":"长期利润分享计划","FY005004":"长期残疾福利","FY005005":"劳动补偿费（短期）","FY005006":"劳动补偿费（长期）","FY005007":"股权激励","FY006001":"洗车费","FY006002":"广告费","FY006003":"业务宣传费","FY006004":"展览展会费","FY006005":"售后服务费","FY006006":"客诉费用","FY006007":"其他营运费用","FY006008":"专项促销费","FY006009":"超市促销宣传费","FY006010":"超市会员促销费","FY006011":"超市线上平台运维费","FY006012":"超市美陈装饰费","FY006013":"超市其他营运费用","FY006014":"百购促销宣传费","FY006015":"百购会员促销费","FY006016":"百购线上平台运维费","FY006017":"百购美陈装饰费","FY006018":"百购其他营运费用","FY006019":"线上其他营运费用","FY007001":"促销费用","FY007002":"媒体费用","FY007003":"终端费用","FY007004":"会员营销","FY007005":"品牌传播","FY007006":"营销拓客","FY007007":"项目营销","FY007008":"联合营销","FY007009":"文化营销","FY007010":"网络营销","FY007011":"其他企划费用","FY008001":"市场管理费","FY008002":"商务服务费","FY008003":"调研服务费","FY008004":"品牌建设费","FY008005":"招商运营费","FY008006":"运营服务费","FY008007":"平台服务费","FY008008":"平台软件费","FY008009":"直播服务费","FY008010":"淘客、挑客推广","FY008011":"信息投流费","FY008012":"推广服务费","FY008013":"线下促销费","FY008014":"样品及促销物料费","FY009001":"中标服务费","FY009002":"策划服务费","FY009003":"咨询服务费","FY010001":"运输费","FY010002":"装卸费","FY010003":"包装费","FY010015":"超市包装物","FY010016":"百购包装费","FY010004":"检验费","FY010005":"商品损耗","FY010006":"代理报关费","FY010007":"仓储费","FY010008":"代理海运费","FY010009":"代理港杂费","FY010010":"配送费","FY010011":"编货费","FY010012":"运营支持费","FY010013":"首饰维修费","FY010014":"物料消耗","FY011001":"空置房维修费","FY011002":"空置房物业费","FY011003":"空置房采暖费","FY011004":"其他费用","FY012001":"预定费用","FY012002":"客人用品","FY012003":"清洁用品","FY012004":"布草洗涤费","FY012005":"VIP费用","FY012006":"厨房用具","FY012007":"酒店产品考察费","FY012008":"温泉费用","FY012009":"布草更新","FY012010":"瓷器更新","FY012011":"玻璃器皿更新","FY012012":"厨房用具更新","FY013001":"线上促销成本","FY013002":"百货超市积分兑礼","FY013003":"专项促销成本","FY013004":"广告费（广告公司）","FY013005":"代垫成本费用","FY014001":"在途物资","FY014002":"购买包装物","FY014004":"购买样品宣传品","FY015001":"水费","FY015002":"电费","FY015003":"采暖费","FY015004":"制冷费","FY015005":"蒸汽费","FY015006":"燃气费","FY015007":"其他能源费","FY015008":"代缴水电费","FY016001":"物业维修费","FY016002":"保洁费","FY016003":"安保费","FY016004":"垃圾清运费","FY016005":"物业管理费","FY017001":"维修费","FY017002":"设备维保费","FY018001":"安全生产费用","FY019001":"日常出差","FY019002":"外派往返","FY019003":"党建活动","FY019004":"外出培训","FY020001":"业务招待费","FY021001":"董事会费","FY021002":"独立董事费","FY021003":"信息披露费","FY021004":"会费","FY021005":"托管费","FY021006":"监管费","FY021007":"证照年检费","FY022001":"燃油费","FY022002":"维修保养费","FY022003":"保险费","FY022004":"租赁费","FY022005":"过路停车费","FY022006":"市内交通费","FY022007":"其他汽车费","FY033001":"车船使用税","FY023001":"包干费用","FY023002":"非包干费用","FY023003":"办公费（第一书记经费）","FY024001":"会务费","FY025001":"邮寄快递费","FY026001":"印刷制作费","FY027001":"员工宿舍支出","FY028001":"固定电话费","FY028002":"移动通讯费","FY028003":"网络使用费","FY028004":"代垫电话费","FY029001":"技术服务费","FY030001":"审计费","FY030002":"涉税服务费","FY030003":"法律顾问费","FY030004":"咨询费","FY030005":"评估费","FY030006":"诉讼费","FY030007":"设计费","FY030008":"检测费","FY030009":"公证费","FY030010":"其他中介机构费","FY031001":"场地租赁费","FY031002":"房屋租赁费","FY031003":"物业服务费","FY031004":"设备租赁费","FY031005":"花卉租赁费","FY031006":"房屋租赁（新租赁准则）","FY031007":"设备租赁（新租赁准则）","FY032001":"人身保险费","FY032002":"财产保险费","FY032003":"公众责任险","FY032004":"平台运费险","FY034001":"账扣-水费","FY034002":"账扣-电费","FY034003":"账扣-物业管理费","FY034004":"账扣-百购促销宣传费","FY034005":"账扣-手续费","FY034006":"账扣-固定电话费","FY034007":"账扣-网络使用费","FY035001":"利息支出-贷款利息","FY035002":"利息支出-票据利息","FY035003":"利息支出-债券利息","FY035004":"利息支出-贴现利息","FY035005":"利息支出-信托利息","FY035006":"利息支出-资金使用费","FY035007":"利息支出-融资租赁利息","FY035008":"利息支出-经营租赁利息","FY035009":"债券承销费","FY035010":"贷款服务费","FY035011":"担保费支出","FY036001":"汇兑手续费","FY036002":"账户管理费","FY036003":"第三方支付手续费","FY036004":"银行卡手续费","FY036005":"票据购买手续费","FY036006":"备付金手续费","FY036007":"银行函证费","FY036008":"汇兑损益","FY037001":"研发装备调试费","FY037002":"研发样品费","FY037003":"研发中试费","FY037004":"研发新产品设计费","FY037005":"研发新工艺规程制定费","FY037006":"研发新药研制的临床试验费","FY037007":"研发委外研发费","FY037008":"研发物流运费","FY037009":"研发资料费","FY037010":"研发注册费","FY037011":"研发专利申请维护费","FY037012":"研发科技研发保险费","FY037013":"研发成果鉴定验收费","FY037014":"专家劳务费","FY037015":"材料费","FY038001":"税盘维护费","FY038002":"文化建设费","FY038003":"辐照服务费","FY038004":"绿化环保费","FY038005":"知识产权维护费","FY038006":"清算损益","FY038007":"开办费","FY038008":"地铁资源费","FY038009":"其他费用","FY038010":"预计负债","FY038011":"预提费用","FY040001":"罚款","FY040002":"税收滞纳金","FY040003":"其他营业外支出","FY040004":"非流动资产处置损失","FY040005":"盘亏损失","FY040006":"捐赠支出","FY040007":"非常损失","FY040008":"违约金支出","FY039001":"装修改造费","ZC001001":"租入固定资产改良支出","ZC001002":"装修及修理支出","ZC001003":"设计费","ZC001004":"开办费","ZC001005":"设施改造","ZC001006":"道路冠名费","ZC001007":"安全生产费","ZC001008":"其他长期待摊费用","ZC001009":"在建长期待摊工程","ZC001010":"其他应付(工程款）","ZC002001":"建筑工程","ZC002002":"安装工程","ZC002003":"在安装设备","ZC002004":"配套设施工程","ZC002005":"装修装饰工程","ZC002006":"房屋改造","ZC002007":"报批报建费","ZC002008":"前期准备费","ZC002009":"待摊支出","ZC002099":"其他","ZC007010":"在建投资性房地产","ZC003001":"低值易耗品（一次摊销）","ZC003002":"低值易耗品（五五摊销）","ZC004001":"房屋及建筑物","ZC004002":"机器设备","ZC004003":"运输工具","ZC004004":"电子设备","ZC004005":"办公设备","ZC004006":"其他设备","ZC004007":"研发检测设备","ZC004008":"营业设备","ZC004009":"厨具用具","ZC004010":"安全生产设备","ZC005001":"土地使用权","ZC005002":"专利权","ZC005003":"软件","ZC005004":"商标权","ZC005005":"著作权","ZC005006":"域名","ZC005007":"采矿权","ZC005008":"特许经营权","ZC005009":"数据资源","ZC005010":"其他无形资产","ZC007001":"房屋建筑物","ZC007002":"土地使用权","ZC006001":"超市会员活动费用（行政领用）","ZC006002":"专项促销费（行政领用）","ZC006003":"超市包装费（行政领用）","ZC006004":"百购会员活动费用（行政领用）","ZC006005":"百购促销宣传费（行政领用）","ZC006006":"超市促销宣传费（行政领用）","ZC006007":"办公费（行政领用）","ZC006008":"非货币性福利","ZC006009":"业务招待费（行政领用）","ZC006010":"领用促销物料","FY014003":"领用包装物","FY041001":"上交党费","FY041002":"下拨党费","FY041003":"党员教育费","FY041004":"表彰费","FY041005":"走访慰问","FY041006":"其他支出","FY042001":"长期待摊费用摊销"};
+var CURN={EUR:'欧元',USD:'美元',JPY:'日元',GBP:'英镑',HKD:'港币',CNY:'人民币',CHF:'瑞士法郎'};
+var FYD={taxi:'FY022006',train:'FY022006',park:'FY022005',fuel:'FY022001',car:'FY022004',flight:'FY019001',ins:'FY019001',hotel:'FY019001',meal:'FY020001',gift:'FY020001',office:'FY023002',soft:'FY023002',food:'FY023002',tel:'FY028002',post:'FY025001',other:'FY038009'};
+var FYA={FY019001:'发票；住宿发票写明住宿人；机票发票写明全部航班',FY020001:'申请、邀请函（盖章）、发票、菜单',FY022001:'发票、加油清单、备注期间',FY022004:'发票、合同',FY022005:'发票、车牌号',FY022006:'发票、备注期间',FY023002:'发票、领用明细、付款截图',FY025001:'发票、邮寄清单',FY028002:'发票、备注期间',FY038009:'发票、申请',FY029001:'发票、合同',FY001012:'发票（如有）、发放汇总表'};
+var aEdit='', tripOpen='', fullSel={};
+function hqOn(k){ return (k||cur)>=HQ_FROM; }
+function HQ(){ if(!D.hq) D.hq={}; return D.hq; }
+function stdRow(n){ var r=STD[n-1]; if(!r) return null; var o=(HQ().stdo||{})['n'+n]; return {n:n,country:r[1],city:r[2],cur:r[3],h:o?+o.h:r[4],m:o?+o.m:r[5],p:o?+o.p:r[6],chg:!!o,name:r[1]+(r[2]?' '+r[2]:'')}; }
+function fxOf(k,c){ if(c==='EUR') return 1; var f=+(((HQ().fx||{})[k]||{})[c]); return f>0?f:0; }
+function toEur(v,c,k){ var f=fxOf(k,c); return f?r2(v/f):null; }
+function antOf(id,k){ var m=D.months[k||cur]; return m?m.ants.find(function(a){return a.id===id;})||null:null; }
+function fyOf(x,a){ if(a&&a.kind==='ent') return 'FY020001'; if(a) return (x.cat==='meal'||x.cat==='gift')?'FY020001':'FY019001'; return (HQ().fy||{})[x.cat]||FYD[x.cat]||'FY038009'; }
+function fyName(c){ return FYALL[c]||''; }
+function dayList(a){ var out=[]; if(!a||!a.from||!a.to||a.to<a.from) return out; var d=new Date(a.from+'T00:00:00Z'), e=new Date(a.to+'T00:00:00Z'), n=0; while(d<=e&&n<92){ out.push(d.toISOString().slice(0,10)); d.setUTCDate(d.getUTCDate()+1); n++; } return out; }
+function dayOf(a,d){ var x=(a.days||{})[d]||{}; return {c:x.c||a.city||DE_DEF,n:x.n===undefined?(d<a.to):!!x.n,p:x.p||''}; }
+function setDay(a,d,f,v){ var cu=dayOf(a,d); cu[f]=v; a.days=a.days||{}; a.days[d]={c:cu.c,n:cu.n?1:0,p:cu.p}; }
+function mealDays(){ var s={}; Object.keys(D.months).forEach(function(k){ D.months[k].items.forEach(function(x){ if(x.cat==='meal') s[x.date]=1; }); }); return s; }
+function colOf(c){ return c==='train'?'train':(c==='flight'||c==='ins')?'flight':c==='car'?'car':(c==='taxi'||c==='park'||c==='fuel')?'oth':c==='hotel'?'hotel':''; }
+/* 一次出差按天汇总：票据按日期落到当天，伙食补助 = 当天所在城市的标准，当天有招待餐票则为 0；公杂不发 */
+function tripCalc(a,k){ k=k||cur; var m=D.months[k]||{items:[]}, items=m.items.filter(function(x){return x.ant===a.id;}), L=dayList(a), md=mealDays(), rows=[], T={days:0,nights:0,train:0,flight:0,car:0,oth:0,hotel:0,meal:0,pub:0,tot:0,ent:0,rest:0,nofx:false,out:0,hn:0};
+  L.forEach(function(d){ var dy=dayOf(a,d), s=stdRow(dy.c)||stdRow(DE_DEF), r={d:d,p:dy.p,c:dy.c,std:s,night:dy.n?1:0,train:0,flight:0,car:0,oth:0,hotel:0,meal:0,pub:0,ent:!!md[d]};
+    items.forEach(function(x){ var xd=x.date<L[0]?L[0]:x.date>L[L.length-1]?L[L.length-1]:x.date; if(xd!==d) return; var c=colOf(x.cat); if(c) r[c]=r2(r[c]+x.amt); });
+    if(!r.ent){ var e=toEur(s.m,s.cur,k); if(e===null) T.nofx=true; else r.meal=e; }
+    r.tot=r2(r.train+r.flight+r.car+r.oth+r.hotel+r.meal+r.pub); rows.push(r); T.days++; T.nights+=r.night;
+    ['train','flight','car','oth','hotel','meal','tot'].forEach(function(f){ T[f]=r2(T[f]+r[f]); }); });
+  items.forEach(function(x){ if(x.cat==='meal'||x.cat==='gift') T.ent=r2(T.ent+x.amt); else if(!colOf(x.cat)) T.rest=r2(T.rest+x.amt); if(x.cat==='hotel') T.hn+=(+x.qty||0); if(L.length&&(x.date<L[0]||x.date>L[L.length-1])) T.out++; });
+  return {rows:rows,T:T,items:items}; }
+function allowAnt(a,k){ k=k||cur; if(!hqOn(k)||!a||a.kind!=='trip') return 0; return tripCalc(a,k).T.meal; }
+function allowMon(k){ var m=D.months[k]; if(!m||!hqOn(k)) return 0; return r2(m.ants.reduce(function(s,a){return s+allowAnt(a,k);},0)); }
+function chkList(a,k){ if(a.kind==='ent') return [['appr','招待申请'],['inv','邀请函（盖章）'],['menu','菜单']];
+  var L=[['appr','出差申请／审批件'],['sign','行程明细表（签字版）']], days=dayList(a), m=D.months[k||cur]||{items:[]};
+  if(days.some(function(d){ var s=stdRow(dayOf(a,d).c); return s&&s.country!=='德国'; })) L.push(['batch','出国批示']);
+  if(days.some(function(d){ var s=stdRow(dayOf(a,d).c); return s&&s.cur!=='EUR'; })||m.items.some(function(x){return x.ant===a.id&&x.cur&&x.cur!=='EUR';})) L.push(['fxb','汇率依据']);
+  return L; }
+function stdOpt(n){ var s=stdRow(n); return s?'<option value="'+n+'">'+esc(s.name)+'（住宿 '+s.h+'／伙食 '+s.m+' '+CURN[s.cur]+'）</option>':''; }
+function cityOpts(){ var h='<optgroup label="德国">'+[169,166,167,168].map(stdOpt).join('')+'</optgroup><optgroup label="其他国家和地区">'; STD.forEach(function(r){ if(r[1]!=='德国') h+=stdOpt(r[0]); }); return h+'</optgroup>'; }
+function hqHotel(){ var ks={}, a=antOf($('f-ant').value), ord=[]; if(a&&a.kind==='trip'){ dayList(a).forEach(function(d){ var c=dayOf(a,d).c; if(!ks[c]){ ks[c]=1; ord.push(c); } }); } [169,166,167,168].forEach(function(c){ if(!ks[c]){ ks[c]=1; ord.push(c); } }); return ord.map(function(c){ return stdOf('hq:'+c); }).filter(Boolean); }
+function antLabel(a,i){ return (a.kind==='ent'?'招待单 ':a.kind==='trip'?'出差单 ':'申请 ')+letter(i); }
+function antIssues(L){ if(!hqOn()) return; var m=M();
+  m.ants.forEach(function(a,i){ var nm=antLabel(a,i)+'（'+a.title+'）';
+    if(!a.kind){ L.push(['warn',nm+' 还没有选类型和日期，请点“改”补上']); return; }
+    if(!a.appr) L.push(['warn',nm+' 没有填审批完成日期']); else if(a.from&&a.appr>a.from) L.push(['bad',nm+' 的审批完成日期（'+dde(a.appr)+'）晚于'+(a.kind==='trip'?'出发':'招待')+'日期（'+dde(a.from)+'），集团要求先审批']);
+    chkList(a).forEach(function(c){ if(!(a.chk||{})[c[0]]) L.push(['warn',nm+' 缺附件确认：'+c[1]]); });
+    if(a.kind!=='trip') return; var c=tripCalc(a), T=c.T;
+    if(T.nofx) L.push(['bad',nm+' 用到外币标准，请先在“报销标准设置”里填本月汇率']);
+    if(T.out) L.push(['warn',nm+' 有 '+T.out+' 张票据的日期不在行程日期内，请核对行程是否闭环']);
+    var np=c.rows.filter(function(r){return !r.p;}).length; if(np) L.push(['warn',nm+' 有 '+np+' 天没有填日程']);
+    if(T.hn!==T.nights&&(T.hn||T.hotel)) L.push(['warn',nm+' 行程里的住宿天数是 '+T.nights+'，住宿票据合计 '+T.hn+' 晚，请核对']);
+    m.ants.forEach(function(b,j){ if(j>i&&b.kind==='trip'&&b.from&&a.from&&b.from<=a.to&&a.from<=b.to) L.push(['warn',nm+' 和 '+antLabel(b,j)+' 的日期有重叠']); }); });
+  numbered().forEach(function(r){ var x=r.it; if(x.hist) return; var fy=fyOf(x,r.ant);
+    if(!r.ant&&(x.cat==='flight'||x.cat==='hotel')) L.push(['warn',r.no+' 是'+(CAT[x.cat]||CAT.other).cn+'，应挂在出差单下面']);
+    if(x.cat==='hotel'&&!x.std) L.push(['warn',r.no+' 是住宿票据，但没有选用住宿标准']);
+    if(!x.att) L.push(['warn',r.no+'（'+fy+' '+fyName(fy)+'）还没有确认附件：'+(FYA[fy]||'发票')]); }); }
+/* 出差单下面展开的行程 */
+function tripBox(a,i){ var k=chkList(a), h='<div style="background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:10px 12px">';
+  h+='<div class="bar" style="margin-bottom:8px"><b>附件</b>'+k.map(function(c){ var on=(a.chk||{})[c[0]]; return '<label style="display:inline-flex;align-items:center;gap:4px;font-size:13px"><input type="checkbox" style="width:auto" data-achk="'+a.id+'|'+c[0]+'"'+(on?' checked':'')+(RO?' disabled':'')+'>'+c[1]+'</label>'; }).join('')+'<span class="note">文件本身用右侧“＋”挂到本单。</span></div>';
+  if(a.kind!=='trip') return h+'</div>';
+  var c=tripCalc(a), T=c.T, used={}; c.rows.forEach(function(r){ used[r.c]=1; }); [169,166,167,168].forEach(function(n){ used[n]=1; });
+  var short=Object.keys(used).map(Number).map(stdOpt).join('')+'<option value="more">其他国家或城市…</option>', full=cityOpts();
+  h+='<div class="wrap"><table style="min-width:1080px"><thead><tr><th>日期</th><th style="min-width:200px">日程</th><th>所在地（标准）</th><th>住宿</th><th class="r">高铁</th><th class="r">机票</th><th class="r">租车</th><th class="r">其他交通</th><th class="r">住宿费</th><th class="r">伙食补助</th><th class="r">合计</th></tr></thead><tbody>';
+  var z=function(v){ return v?fmt(v):''; };
+  c.rows.forEach(function(r){ h+='<tr><td style="white-space:nowrap">'+dde(r.d)+'</td><td><input data-dp="'+a.id+'|'+r.d+'" value="'+esc(r.p)+'" placeholder="例：汉诺威—慕尼黑，拜访客户"'+(RO?' disabled':'')+'></td><td><select data-dc="'+a.id+'|'+r.d+'"'+(RO?' disabled':'')+'>'+(fullSel[a.id+'|'+r.d]?full:short).replace('value="'+r.c+'"','value="'+r.c+'" selected')+'</select></td><td><input type="checkbox" style="width:auto" data-dn="'+a.id+'|'+r.d+'"'+(r.night?' checked':'')+(RO?' disabled':'')+' aria-label="'+dde(r.d)+' 当晚住宿"></td><td class="r">'+z(r.train)+'</td><td class="r">'+z(r.flight)+'</td><td class="r">'+z(r.car)+'</td><td class="r">'+z(r.oth)+'</td><td class="r">'+z(r.hotel)+'</td><td class="r">'+(r.ent?'<span class="chip">有招待餐票</span>':fmt(r.meal))+'</td><td class="r">'+fmt(r.tot)+'</td></tr>'; });
+  h+='<tr class="sum"><td>合计</td><td>出差 '+T.days+' 天，住宿 '+T.nights+' 晚</td><td></td><td></td><td class="r">'+z(T.train)+'</td><td class="r">'+z(T.flight)+'</td><td class="r">'+z(T.car)+'</td><td class="r">'+z(T.oth)+'</td><td class="r">'+z(T.hotel)+'</td><td class="r">'+fmt(T.meal)+'</td><td class="r">'+fmt(T.tot)+'</td></tr></tbody></table></div>';
+  h+='<p class="note" style="margin:6px 0">伙食补助按当天所在地的标准包干；当天有招待餐票就不发。公杂补助不发。票据按票据日期落到当天。'+(T.ent?'本单另有招待和礼品票据 '+fmt(T.ent)+' 欧元，归业务招待费，不在本表内。':'')+(T.rest?'另有 '+fmt(T.rest)+' 欧元的其他票据不在本表内。':'')+(T.nofx?'<b style="color:var(--bad)">本月汇率还没有设置，外币标准暂时算不出来。</b>':'')+'</p>';
+  h+='<div class="bar"><button class="btn pri sm" data-xtrip="'+a.id+'">导出行程明细表</button><button class="btn sm" data-xtzip="'+a.id+'">导出本单附件包（含行程明细表）</button><span class="note" id="tz-'+a.id+'"></span></div>';
+  return h+'</div>'; }
+function antRow(a,i){ var s=sumAnt(a.id), over=a.bud>0&&s>a.bud+0.005, hq=hqOn(), al=hq?allowAnt(a):0;
+  var info=hq?('<br><span class="note">'+(a.kind?(a.kind==='ent'?'招待':'出差')+'　'+(a.from?dde(a.from)+(a.to&&a.to!==a.from?' 至 '+dde(a.to):''):'未填日期')+'　审批 '+(a.appr?dde(a.appr):'未填'):'未选类型')+(al?'　含伙食补助 '+fmt(al):'')+'</span>'):'';
+  var h='<tr><td>'+letter(i)+'（Antrag '+(i+1)+'）</td><td>'+esc(a.title)+info+'</td><td class="r">'+(a.bud>0?fmt(a.bud):'—')+'</td><td class="r">'+fmt(s)+'</td><td>'+(a.bud>0?(over?'<span class="chip bad">超预算 '+fmt(s-a.bud)+'</span>':'<span class="chip ok">预算内，余 '+fmt(a.bud-s)+'</span>'):'<span class="chip">未设预算</span>')+'</td><td style="white-space:nowrap">'+fileCell(a.id)+'</td><td style="white-space:nowrap">'+(hq&&a.kind?'<button class="btn sm" data-atrip="'+a.id+'" aria-expanded="'+(tripOpen===a.id)+'">'+(tripOpen===a.id?'收起':(a.kind==='trip'?'行程':'附件'))+'</button> ':'')+(RO?'':(hq?'<button class="btn sm" data-aedit="'+a.id+'" aria-label="修改申请 '+letter(i)+'">改</button> ':'')+'<button class="btn sm del" data-adel="'+a.id+'" aria-label="删除申请 '+letter(i)+'">删除</button>')+'</td></tr>';
+  if(hq&&a.kind&&tripOpen===a.id) h+='<tr><td colspan="7">'+tripBox(a,i)+'</td></tr>';
+  return h; }
+function antClear(){ aEdit=''; ['a-title','a-bud','a-from','a-to','a-appr'].forEach(function(i){ $(i).value=''; }); $('a-kind').value='trip'; $('a-city').value=String(DE_DEF); $('a-add').textContent=hqOn()?'添加出差单／招待单':'添加申请'; $('a-cancel').hidden=true; }
+function saveAnt(){ var t=$('a-title').value.trim(), b=num($('a-bud').value), o={title:t,bud:b>0?r2(b):0}, m=M(); if(!t){ toast('请填申请事由'); return; }
+  if(hqOn()){ o.kind=$('a-kind').value==='ent'?'ent':'trip'; o.from=$('a-from').value; o.to=$('a-to').value||o.from; o.appr=$('a-appr').value||''; o.city=parseInt($('a-city').value,10)||DE_DEF;
+    if(!o.from){ toast(o.kind==='trip'?'请填出发日期':'请填招待日期'); return; } if(o.to<o.from){ toast('结束日期不能早于开始日期'); return; } if(o.kind==='ent') o.to=o.from; if(dayList(o).length>=92){ toast('一次出差最多 91 天，请拆成两张'); return; } }
+  if(aEdit){ var a=m.ants.find(function(x){return x.id===aEdit;}); if(!a){ toast('这张单刚被改动过，请再试一次'); antClear(); return; } Object.keys(o).forEach(function(f){ a[f]=o[f]; }); if(a.days){ var keep={}; dayList(a).forEach(function(d){ if(a.days[d]) keep[d]=a.days[d]; }); a.days=keep; } tripOpen=a.id; }
+  else { o.id=uid(); m.ants.push(o); if(hqOn()) tripOpen=o.id; }
+  antClear(); store(); render(); toast('已保存'); }
+function renderHQ(){ var on=hqOn(); document.body.classList.toggle('nohq',!on); if(!on) return; var box=$('hq-box'), ae=document.activeElement; if(box.contains(ae)&&ae.id!=='hq-q') return;
+  var fx=(HQ().fx||{})[cur]||{};
+  $('hq-fx').innerHTML=['USD','JPY','GBP','HKD','CNY','CHF'].map(function(c){ return '<label>1 欧元 = ? '+CURN[c]+'<input inputmode="decimal" data-fx="'+c+'" value="'+(fx[c]>0?fx[c]:'')+'"'+(RO?' disabled':'')+'></label>'; }).join('');
+  var q=$('hq-q').value.trim(), L=STD.filter(function(r){ return !q||(r[1]+' '+r[2]).indexOf(q)>-1; }).slice(0,40);
+  $('hq-list').innerHTML=L.length?L.map(function(r){ var s=stdRow(r[0]), inp=function(f){ return '<input inputmode="decimal" style="width:80px;text-align:right" data-so="'+s.n+'|'+f+'" value="'+s[f]+'"'+(RO?' disabled':'')+' aria-label="'+esc(s.name)+' '+(f==='h'?'住宿':f==='m'?'伙食':'公杂')+'">'; };
+    return '<tr><td>'+s.n+'</td><td>'+esc(s.country)+'</td><td>'+esc(s.city)+'</td><td>'+CURN[s.cur]+'</td><td class="r">'+inp('h')+'</td><td class="r">'+inp('m')+'</td><td class="r">'+inp('p')+'</td><td>'+(s.chg?'<span class="chip warn">已改</span> <button class="btn sm" data-sorst="'+s.n+'">恢复原值</button>':'')+'</td></tr>'; }).join(''):'<tr><td colspan="8" class="note">没有找到。</td></tr>';
+  $('hq-fy').innerHTML=CATS.map(function(c){ var v=(HQ().fy||{})[c[0]]||FYD[c[0]]; return '<label>'+c[1]+'<input data-fyc="'+c[0]+'" value="'+v+'"'+(RO?' disabled':'')+'><span>'+esc(fyName(v)||'编号不在集团清单里')+'</span></label>'; }).join(''); }
+/* ---------- 集团格式的导出 ---------- */
+function wbBuf(wb){ try{ wb.creator='鲁商德国'; wb.lastModifiedBy='鲁商德国'; wb.company='鲁商德国'; wb.modified=new Date(); if(!wb.created) wb.created=new Date(); }catch(e){} return wb.xlsx.writeBuffer(); }
+function saveBlob(blob,name){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500); }
+function plainHead(row){ row.eachCell({includeEmpty:true},function(c){ c.font={name:'Arial',bold:true,size:10}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEDEDED'}}; c.alignment={wrapText:true,vertical:'middle',horizontal:'center'}; }); row.height=34; }
+function boxAll(ws,r1,r2,n){ var t={style:'thin',color:{argb:'FF808080'}}; for(var r=r1;r<=r2;r++) for(var c=1;c<=n;c++) ws.getCell(r,c).border={top:t,left:t,bottom:t,right:t}; }
+function tripWb(a){ var c=tripCalc(a), T=c.T, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('行程明细表'), N=13;
+  ws.columns=[{width:12},{width:34},{width:9},{width:9},{width:11},{width:11},{width:11},{width:11},{width:12},{width:12},{width:12},{width:12},{width:44}];
+  var t=ws.addRow(['行程明细表']); ws.mergeCells(1,1,1,N); t.height=30; t.getCell(1).font={name:'Arial',bold:true,size:16}; t.getCell(1).alignment={horizontal:'center',vertical:'middle'};
+  plainHead(ws.addRow(['日期','日程','出差天数','住宿天数','高铁\n（欧元）','机票\n（欧元）','租车\n（欧元）','其他交通\n（欧元）','住宿总费\n（欧元）','伙食补助\n（欧元）','公杂补助\n（欧元）','总费用\n（欧元）','备注\n（填写出国管理办法标准）']));
+  c.rows.forEach(function(r){ var s=r.std, fx=fxOf(cur,s.cur), memo=s.name+'：住宿 '+s.h+'、伙食 '+s.m+' '+CURN[s.cur]+'／天'+(s.cur!=='EUR'&&fx?'，汇率 1 欧元 = '+fx+' '+CURN[s.cur]:'')+(r.ent?'；当天有招待餐票，不发伙食补助':'');
+    var row=ws.addRow([new Date(r.d+'T00:00:00Z'),r.p,1,r.night,r.train||null,r.flight||null,r.car||null,r.oth||null,r.hotel||null,r.meal,0,r.tot,memo]); row.font={name:'Arial',size:10}; row.alignment={vertical:'middle',wrapText:true,horizontal:'left'}; row.getCell(1).numFmt='yyyy-mm-dd'; for(var i=5;i<=12;i++) row.getCell(i).numFmt='#,##0.00'; });
+  var s=ws.addRow(['合计','-',T.days,T.nights,T.train,T.flight,T.car,T.oth,T.hotel,T.meal,0,T.tot,'']); s.font={name:'Arial',bold:true,size:11}; s.alignment={vertical:'middle',horizontal:'left'}; s.height=22; s.eachCell({includeEmpty:true},function(cell,i){ if(i<=N) cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}}; }); for(var i=5;i<=12;i++) s.getCell(i).numFmt='#,##0.00';
+  var g=ws.addRow(['出差人员：（签字）']); ws.mergeCells(g.number,1,g.number,N); g.height=30; g.getCell(1).font={name:'Arial',size:11}; g.getCell(1).alignment={vertical:'middle',horizontal:'left'};
+  boxAll(ws,1,g.number,N);
+  ws.addRow([]); var notes=['出差事由：'+a.title+'　　出差人：'+(D.emp||'')+'　　行程：'+dde(a.from)+' 至 '+dde(a.to)+'　　审批完成日期：'+(a.appr?dde(a.appr):'未填'),'说明：伙食补助按当天所在地的标准包干，当天有招待餐票不发；公杂补助不发；“其他交通”含出租车、停车和加油。'+(T.ent?'本次出差另有业务招待费票据 '+fmt(T.ent)+' 欧元，不在本表内。':'')+(T.rest?'另有其他票据 '+fmt(T.rest)+' 欧元不在本表内。':'')];
+  notes.forEach(function(n){ var r=ws.addRow([n]); ws.mergeCells(r.number,1,r.number,N); r.getCell(1).font={name:'Arial',size:9,color:{argb:'FF595959'}}; r.getCell(1).alignment={wrapText:true,vertical:'top',horizontal:'left'}; r.height=n.length>70?26:15; });
+  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9};
+  return wb; }
+function tripName(a){ return '行程明细表_'+a.from.replace(/-/g,'')+'-'+a.to.replace(/-/g,'')+'_'+safeName(a.title).slice(0,40)+'.xlsx'; }
+function xTrip(id){ var a=antOf(id); if(!a||a.kind!=='trip') return; if(typeof ExcelJS==='undefined'){ toast('表格组件没有加载成功，请检查网络后刷新'); return; } if(tripCalc(a).T.nofx){ toast('请先在“报销标准设置”里填本月汇率'); return; }
+  wbBuf(tripWb(a)).then(function(buf){ saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),tripName(a)); }); }
+function xTripZip(id){ var m=M(), i=m.ants.findIndex(function(a){return a.id===id;}), a=m.ants[i]; if(!a) return; if(busyUp){ toast('正在处理中，请稍候'); return; } if(typeof JSZip==='undefined'||typeof ExcelJS==='undefined'){ toast('组件没有加载成功，请检查网络后刷新'); return; }
+  var jobs=[], st=$('tz-'+id)||$('q-state'), root=safeName(antLabel(a,i)+'_'+a.title).slice(0,60)+'/';
+  filesOf(a.id).forEach(function(f,fi){ jobs.push({f:f,path:root+'00_审批和附件/'+safeName(f.name)}); });
+  numbered().filter(function(r){return r.ant&&r.ant.id===id;}).forEach(function(r){ filesOf(r.it.id).forEach(function(f,fi){ jobs.push({f:f,path:root+'票据/'+stdName(r,f,fi)}); }); });
+  busyUp=true; var zip=new JSZip(), n=0, fail=[], used={};
+  var fin=function(){ var p=a.kind==='trip'&&!tripCalc(a).T.nofx?wbBuf(tripWb(a)).then(function(buf){ zip.file(root+tripName(a),buf); }):Promise.resolve();
+    p.then(function(){ return zip.generateAsync({type:'blob',compression:'STORE'}); }).then(function(blob){ saveBlob(blob,safeName(cur+'_'+antLabel(a,i)+'_'+a.title).slice(0,70)+'.zip'); busyUp=false; st.textContent='已导出 '+(jobs.length-fail.length)+' 个文件'+(fail.length?'，失败 '+fail.length+' 个：'+fail.join('、'):''); window.__lastZip={n:jobs.length-fail.length,size:blob.size}; },function(){ busyUp=false; st.textContent='打包失败，请再试一次'; }); };
+  var next=function(){ if(n>=jobs.length){ fin(); return; } var j=jobs[n++]; st.textContent='正在下载 '+n+' / '+jobs.length;
+    rtdb.ref('bxfile/'+j.f.id).once('value').then(function(s){ var v=s.val(); if(!v) throw new Error('empty'); var parts=[]; for(var c=0;c<j.f.n;c++) parts.push(v[c]||''); var p=j.path; if(used[p]){ var d=p.lastIndexOf('.'); p=p.slice(0,d)+'_'+(++used[j.path])+p.slice(d); } else used[p]=1; zip.file(p,parts.join(''),{base64:true}); }).catch(function(){ fail.push(j.f.name); }).then(next); };
+  next(); }
+function xFY(){ if(!hqOn()){ toast('这张表从 2026 年 11 月起才有'); return; } if(typeof ExcelJS==='undefined'){ toast('表格组件没有加载成功，请检查网络后刷新'); return; }
+  var m=M(), N=numbered(), by={}, det=[], add=function(fy,amt){ by[fy]=by[fy]||{n:0,s:0}; by[fy].n++; by[fy].s=r2(by[fy].s+amt); };
+  N.forEach(function(r){ var x=r.it, fy=fyOf(x,r.ant); add(fy,x.amt); det.push([r.no,r.ant?antLabel(r.ant,r.idx)+' '+r.ant.title:'日常报销',new Date(x.date+'T00:00:00Z'),(CAT[x.cat]||CAT.other).cn,fy,fyName(fy),x.no||'',venOf(x),origEur(x),x.amt,x.att?'已确认':'未确认',filesOf(x.id).length,remark(x)]); });
+  m.ants.forEach(function(a,i){ var al=allowAnt(a); if(!al) return; add('FY019001',al); det.push([letter(i)+'补',antLabel(a,i)+' '+a.title,new Date(a.to+'T00:00:00Z'),'伙食补助','FY019001',fyName('FY019001'),'','',al,al,(a.chk||{}).sign?'已确认':'未确认',0,'按集团出国标准包干，见行程明细表']); });
+  if(!det.length){ toast('本月还没有票据'); return; }
+  var wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('费用项目汇总'); ws.columns=[{width:16},{width:22},{width:10},{width:16},{width:60}];
+  var t=ws.addRow(['鲁商德国 费用报销汇总（按集团费用项目）　'+cur+'　报销人：'+(D.emp||'')]); ws.mergeCells(1,1,1,5); t.getCell(1).font={name:'Arial',bold:true,size:12}; t.height=24;
+  plainHead(ws.addRow(['费用项目编号','费用项目名称','笔数','报销金额（欧元）','必要附件（集团审核要点）'])); var tot=0, cnt=0;
+  Object.keys(by).sort().forEach(function(fy){ var r=ws.addRow([fy,fyName(fy),by[fy].n,by[fy].s,FYA[fy]||'发票']); r.font={name:'Arial',size:10}; r.alignment={horizontal:'left',vertical:'middle',wrapText:true}; r.getCell(4).numFmt='#,##0.00'; tot=r2(tot+by[fy].s); cnt+=by[fy].n; });
+  var s=ws.addRow(['合计','',cnt,tot,'']); s.font={name:'Arial',bold:true,size:11}; s.alignment={horizontal:'left',vertical:'middle'}; s.getCell(4).numFmt='#,##0.00'; s.eachCell({includeEmpty:true},function(c,i){ if(i<=5) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}}; }); boxAll(ws,2,s.number,5);
+  var w2=wb.addWorksheet('明细'); w2.columns=[{width:8},{width:34},{width:12},{width:16},{width:14},{width:18},{width:22},{width:22},{width:13},{width:13},{width:10},{width:10},{width:44}];
+  plainHead(w2.addRow(['序号','出差单／招待单','票据日期','类别','费用项目编号','费用项目名称','发票号','供应商','票面金额（欧元）','报销金额（欧元）','附件确认','发票文件数','备注']));
+  det.forEach(function(d){ var r=w2.addRow(d); r.font={name:'Arial',size:10}; r.alignment={horizontal:'left',vertical:'middle',wrapText:true}; r.getCell(3).numFmt='yyyy-mm-dd'; r.getCell(9).numFmt='#,##0.00'; r.getCell(10).numFmt='#,##0.00'; });
+  var s2=w2.addRow(['合计','','','','','','','','',tot,'','','']); s2.font={name:'Arial',bold:true,size:11}; s2.alignment={horizontal:'left'}; s2.getCell(10).numFmt='#,##0.00'; s2.eachCell({includeEmpty:true},function(c,i){ if(i<=13) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}}; }); boxAll(w2,1,s2.number,13); w2.views=[{state:'frozen',ySplit:1}];
+  wbBuf(wb).then(function(buf){ saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'费用项目汇总_'+cur+'.xlsx'); window.__lastFY={tot:tot,cnt:cnt,by:by}; }); }
+function hqChange(e){ var t=e.target, ds=t.dataset||{}, p, a;
+  if(ds.dp!==undefined||ds.dc!==undefined||ds.dn!==undefined){ p=(ds.dp||ds.dc||ds.dn).split('|'); a=antOf(p[0]); if(!a||RO) return;
+    if(ds.dc!==undefined){ if(t.value==='more'){ fullSel[p[0]+'|'+p[1]]=1; render(); var el=document.querySelector('[data-dc="'+p[0]+'|'+p[1]+'"]'); if(el) el.focus(); return; } setDay(a,p[1],'c',parseInt(t.value,10)||DE_DEF); delete fullSel[p[0]+'|'+p[1]]; }
+    else if(ds.dp!==undefined) setDay(a,p[1],'p',t.value.trim().slice(0,80)); else setDay(a,p[1],'n',t.checked);
+    store(); render(); return; }
+  if(ds.achk){ p=ds.achk.split('|'); a=antOf(p[0]); if(!a||RO) return; a.chk=a.chk||{}; if(t.checked) a.chk[p[1]]=1; else delete a.chk[p[1]]; store(); render(); return; }
+  if(ds.fx){ var v=num(t.value), h=HQ(); h.fx=h.fx||{}; h.fx[cur]=h.fx[cur]||{}; if(v>0) h.fx[cur][ds.fx]=v; else delete h.fx[cur][ds.fx]; store(); t.blur(); render(); fillStd($('f-std').value); hint(); return; }
+  if(ds.so){ p=ds.so.split('|'); var s=stdRow(parseInt(p[0],10)), nv=num(t.value); if(!s||!(nv>=0)){ toast('请填数字'); t.blur(); render(); return; } var o={h:s.h,m:s.m,p:s.p}; o[p[1]]=nv; var hh=HQ(), r=STD[s.n-1]; hh.stdo=hh.stdo||{}; if(o.h===r[4]&&o.m===r[5]&&o.p===r[6]) delete hh.stdo['n'+s.n]; else hh.stdo['n'+s.n]=o; store(); t.blur(); render(); fillStd($('f-std').value); return; }
+  if(ds.fyc){ var code=t.value.trim().toUpperCase(), h2=HQ(); if(!/^[A-Z]{2}\d{6}$/.test(code)){ toast('费用项目编号的格式是两个字母加六位数字，例如 FY023002'); t.blur(); render(); return; } h2.fy=h2.fy||{}; if(code===FYD[ds.fyc]) delete h2.fy[ds.fyc]; else h2.fy[ds.fyc]=code; store(); t.blur(); render(); return; } }
+function hqClick(t){ var ds=t.dataset||{};
+  if(ds.atrip){ tripOpen=tripOpen===ds.atrip?'':ds.atrip; render(); return true; }
+  if(ds.aedit){ var a=antOf(ds.aedit); if(!a) return true; aEdit=a.id; $('a-title').value=a.title; $('a-bud').value=a.bud||''; $('a-kind').value=a.kind==='ent'?'ent':'trip'; $('a-from').value=a.from||''; $('a-to').value=a.to||''; $('a-appr').value=a.appr||''; $('a-city').value=String(a.city||DE_DEF); $('a-add').textContent='保存修改'; $('a-cancel').hidden=false; $('a-title').focus(); return true; }
+  if(ds.xtrip){ xTrip(ds.xtrip); return true; } if(ds.xtzip){ xTripZip(ds.xtzip); return true; }
+  if(ds.sorst){ var h=HQ(); if(h.stdo) delete h.stdo['n'+ds.sorst]; store(); render(); fillStd($('f-std').value); return true; }
+  if(t.id==='a-cancel'){ antClear(); return true; } if(t.id==='x-fy'){ xFY(); return true; }
+  return false; }
 /* ---------- 事件 ---------- */
 function start(){
   $('gate').hidden=true; $('main').hidden=false; $('logout').hidden=false; document.body.classList.toggle('ro',RO);
@@ -522,6 +692,7 @@ function start(){
   load(); cur=D.last||def; $('mon').value=cur;
   $('f-cat').innerHTML=CATS.map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join(''); $('s-cat').innerHTML=$('f-cat').innerHTML; $('s-cat').value='hotel';
   $('f-vat').value=String(CAT[$('f-cat').value].vat); $('f-date').value=''; $('p-mon').value=cur; $('q-from').value=cur.slice(0,4)+'-01'; $('q-to').value=cur.slice(0,4)+'-12';
+  $('a-city').innerHTML=cityOpts(); antClear();
   render(); fillStd(); hint();
 }
 function rulesMerge(space,old){ var base={rules:{'.read':false,'.write':false}}; try{ var o=JSON.parse(old); if(o&&o.rules&&typeof o.rules==='object') base=o; }catch(e){ if(String(old||'').trim()) return null; }
@@ -549,7 +720,7 @@ function init(){
   var sp=''; try{ sp=localStorage.getItem('bx_space')||''; }catch(e){}
   if(/^[0-9a-f]{48}$/.test(sp)) openTeam(sp,false); else gate('');
 }
-$('mon').addEventListener('change',function(){ if(!this.value) return; cur=this.value; D.last=cur; bulk=[]; renderBulk(); $('b-state').textContent=''; store(); clearForm(); $('f-date').value=''; $('p-mon').value=cur; render(); });
+$('mon').addEventListener('change',function(){ if(!this.value) return; cur=this.value; D.last=cur; bulk=[]; renderBulk(); $('b-state').textContent=''; store(); tripOpen=''; fullSel={}; clearForm(); $('f-date').value=''; $('p-mon').value=cur; render(); antClear(); hint(); });
 $('emp').addEventListener('change',function(){ D.emp=this.value.trim(); store(); });
 $('f-cat').addEventListener('change',function(){ $('f-vat').value=String(CAT[this.value].vat); fillStd(); hint(); });
 $('f-std').addEventListener('change',function(){ fillStd(this.value); hint(); });
@@ -558,8 +729,13 @@ $('s-add').addEventListener('click',function(){ var n=$('s-name').value.trim(), 
 ['f-orig','f-cur','f-fx'].forEach(function(i){ $(i).addEventListener('input',hint); $(i).addEventListener('change',hint); });
 $('f-add').addEventListener('click',function(){ saveItem(); });
 $('f-cancel').addEventListener('click',clearForm);
-$('a-add').addEventListener('click',function(){ var t=$('a-title').value.trim(), b=num($('a-bud').value); if(!t){ toast('请填申请事由'); return; } M().ants.push({id:uid(),title:t,bud:b>0?r2(b):0}); $('a-title').value=''; $('a-bud').value=''; store(); render(); });
+$('a-add').addEventListener('click',saveAnt);
+document.addEventListener('change',hqChange);
+$('hq-q').addEventListener('input',renderHQ);
+$('f-ant').addEventListener('change',function(){ fillStd(); hint(); });
+$('f-cur').addEventListener('change',function(){ if(hqOn()&&this.value!=='EUR'&&!$('f-fx').value&&fxOf(cur,this.value)){ $('f-fx').value=fxOf(cur,this.value); hint(); } });
 document.addEventListener('click',function(e){ var t=e.target, m=M();
+  if(hqClick(t)) return;
   if(t.dataset.fopen){ openFile(t.dataset.fopen); return; }
   if(t.dataset.goto){ cur=t.dataset.goto; $('mon').value=cur; D.last=cur; bulk=[]; renderBulk(); clearForm(); render(); window.scrollTo({top:0,behavior:'smooth'}); return; }
   if(t.id==='q-xls'){ xAll(); return; } if(t.id==='q-zip'){ xZip(); return; }
@@ -576,7 +752,7 @@ document.addEventListener('click',function(e){ var t=e.target, m=M();
   if(t.dataset.undo){ var ux=(m.trash||[]).find(function(i){return i.id===t.dataset.undo;}); if(!ux) return; m.trash=m.trash.filter(function(i){return i.id!==ux.id;}); delete ux.del; m.items.push(ux); store(); render(); toast('已恢复'); return; }
   if(t.dataset.purge){ var px=(m.trash||[]).find(function(i){return i.id===t.dataset.purge;}); if(!px) return; ask('彻底删除这张票据吗？',dde(px.date)+'　'+desc(px).cn+'　'+fmt(px.amt)+' 欧元\n票据和它的发票文件都会永久删除，无法恢复。','彻底删除').then(function(y){ if(!y) return; var mm=M(); filesOf(px.id).forEach(function(f){ delFile(f.id); }); mm.trash=(mm.trash||[]).filter(function(i){return i.id!==px.id;}); store(); render(); toast('已彻底删除'); }); return; }
   if(t.dataset.adel){ if(filesOf(t.dataset.adel).length){ toast('这个申请下面还挂着审批件，请先删除文件'); return; } if(m.items.some(function(x){return x.ant===t.dataset.adel;})){ toast('这个申请下面还有票据，先把票据删除或改到别的申请'); return; } var aa=m.ants.find(function(a){return a.id===t.dataset.adel;}); ask('确定删除这个申请吗？',aa?aa.title:'','删除申请').then(function(y){ if(!y) return; var mm=M(); if(mm.items.some(function(x){return x.ant===t.dataset.adel;})){ toast('这个申请下面刚加了票据，不能删除'); return; } mm.ants=mm.ants.filter(function(a){return a.id!==t.dataset.adel;}); store(); render(); }); return; }
-  if(t.dataset.edit){ var x=m.items.find(function(i){return i.id===t.dataset.edit;}); if(!x) return; edit=x.id; $('f-ant').value=x.ant||''; $('f-date').value=x.date; $('f-cat').value=x.cat; $('f-vat').value=String(x.vat); $('f-orig').value=x.orig; $('f-cur').value=x.cur; $('f-fx').value=x.cur==='EUR'?'':x.fx; $('f-amt').value=x.capped?'':x.amt; fillStd(x.std||''); $('f-qty').value=x.qty||''; $('f-no').value=x.no||''; $('f-ven').value=x.ven||''; $('f-note').value=x.note||''; $('f-cancel').hidden=false; $('f-add').textContent='保存修改'; $('f-h').textContent='二、修改票据'; hint(); $('f-h').scrollIntoView({behavior:'smooth'}); return; }
+  if(t.dataset.edit){ var x=m.items.find(function(i){return i.id===t.dataset.edit;}); if(!x) return; edit=x.id; $('f-ant').value=x.ant||''; $('f-date').value=x.date; $('f-cat').value=x.cat; $('f-vat').value=String(x.vat); $('f-orig').value=x.orig; $('f-cur').value=x.cur; $('f-fx').value=x.cur==='EUR'?'':x.fx; $('f-amt').value=x.capped?'':x.amt; fillStd(x.std||''); $('f-qty').value=x.qty||''; $('f-no').value=x.no||''; $('f-ven').value=x.ven||''; $('f-note').value=x.note||''; $('f-att').checked=!!x.att; $('f-cancel').hidden=false; $('f-add').textContent='保存修改'; $('f-h').textContent='二、修改票据'; hint(); $('f-h').scrollIntoView({behavior:'smooth'}); return; }
 });
 $('save').addEventListener('click',function(){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({bx:1,data:D},null,1)],{type:'application/json'})); a.download='报销平台备份_'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500); toast('已导出备份'); });
 $('v-new').addEventListener('click',function(){ (Object.keys(VIEWER).length?ask('重新生成查看链接吗？','现在发给报销人的旧链接会立即失效，需要把新链接重新发给对方。','重新生成'):Promise.resolve(true)).then(function(y){ if(!y) return;
@@ -592,11 +768,12 @@ $('imp-file').addEventListener('change',function(){ var f=this.files[0]; this.va
   var n=0, put=function(list,x){ var i=list.findIndex(function(y){return y.id===x.id;}); if(i>-1) list[i]=x; else list.push(x); n++; };
   (d.stds||[]).forEach(function(x){ put(D.stds,x); }); (d.pays||[]).forEach(function(x){ put(D.pays,x); });
   Object.keys(d.months).forEach(function(k){ if(!/^\d{4}-\d{2}$/.test(k)) return; if(!D.months[k]) D.months[k]={ants:[],items:[]}; (d.months[k].ants||[]).forEach(function(x){ put(D.months[k].ants,x); }); (d.months[k].items||[]).forEach(function(x){ put(D.months[k].items,x); }); });
+  if(d.hq&&typeof d.hq==='object'){ var H=HQ(); ['fx','stdo','fy'].forEach(function(f){ if(d.hq[f]){ H[f]=H[f]||{}; Object.keys(d.hq[f]).forEach(function(q){ H[f][q]=d.hq[f][q]; }); } }); }
   if(d.emp&&!D.emp) D.emp=d.emp; store(); render(); toast('已导入 '+n+' 条。相同编号的记录已被文件内容覆盖。'); }; rd.readAsText(f); });
 $('logout').addEventListener('click',function(){ try{ localStorage.removeItem('bx_space'); }catch(e){} location.hash=''; location.reload(); });
 $('x-travel').addEventListener('click',xTravel); $('x-daily').addEventListener('click',xDaily); $('x-book').addEventListener('click',xBook);
 window.addEventListener('beforeunload',function(e){ if(busyUp){ e.preventDefault(); e.returnValue=''; } });
-window.__bx={book:bookRows,num:numbered,data:function(){return D;}};
+window.__bx={book:bookRows,num:numbered,data:function(){return D;},trip:tripCalc,issues:issues,ver:'2026-11-28 hq1'};
 init();
 })();
 </script>
